@@ -4,12 +4,12 @@
 
     list data structure and GUI for SNAP!
 
-    written by Jens MÃ¶nig and Brian Harvey
+    written by Jens Mšnig and Brian Harvey
     jens@moenig.org, bh@cs.berkeley.edu
 
-    Copyright (C) 2013 by Jens MÃ¶nig and Brian Harvey
+    Copyright (C) 2013 by Jens Mšnig and Brian Harvey
 
-    This file is part of Snap!.
+    This file is part of Snap!. 
 
     Snap! is free software: you can redistribute it and/or modify
     it under the terms of the GNU Affero General Public License as
@@ -59,9 +59,9 @@
 /*global modules, contains, BoxMorph, WorldMorph, HandleMorph,
 PushButtonMorph, SyntaxElementMorph, Color, Point, WatcherMorph,
 StringMorph, SpriteMorph, ScrollFrameMorph, CellMorph, ArrowMorph,
-MenuMorph, snapEquals, Morph, isNil, localize, MorphicPreferences*/
+MenuMorph, snapEquals, Morph, isNil, localize*/
 
-modules.lists = '2013-June-20';
+modules.lists = '2013-March-12';
 
 var List;
 var ListWatcherMorph;
@@ -215,7 +215,7 @@ List.prototype.contains = function (element) {
             return true;
         }
         if (!isNaN(num)) {
-            if (parseFloat(this.first) === num) {
+            if (this.first === num) {
                 return true;
             }
         }
@@ -229,8 +229,7 @@ List.prototype.contains = function (element) {
         return true;
     }
     if (!isNaN(num)) {
-        return (contains(this.contents, num))
-            || contains(this.contents, num.toString());
+        return (contains(this.contents, num));
     }
     return false;
 };
@@ -345,11 +344,11 @@ ListWatcherMorph.prototype.cellColor =
 
 // ListWatcherMorph instance creation:
 
-function ListWatcherMorph(list, parentCell) {
-    this.init(list, parentCell);
+function ListWatcherMorph(list) {
+    this.init(list);
 }
 
-ListWatcherMorph.prototype.init = function (list, parentCell) {
+ListWatcherMorph.prototype.init = function (list) {
     var myself = this;
 
     this.list = list || new List();
@@ -357,7 +356,6 @@ ListWatcherMorph.prototype.init = function (list, parentCell) {
     this.range = 100;
     this.lastUpdated = Date.now();
     this.lastCell = null;
-    this.parentCell = parentCell || null; // for circularity detection
 
     // elements declarations
     this.label = new StringMorph(
@@ -367,7 +365,7 @@ ListWatcherMorph.prototype.init = function (list, parentCell) {
         false,
         false,
         false,
-        MorphicPreferences.isFlat ? new Point() : new Point(1, 1),
+        new Point(1, 1),
         new Color(255, 255, 255)
     );
     this.label.mouseClickLeft = function () {myself.startIndexMenu(); };
@@ -416,9 +414,7 @@ ListWatcherMorph.prototype.init = function (list, parentCell) {
 
     this.color = new Color(220, 220, 220);
     this.isDraggable = true;
-    this.setExtent(new Point(80, 70).multiplyBy(
-        SyntaxElementMorph.prototype.scale
-    ));
+    this.setExtent(new Point(80, 70));
     this.add(this.label);
     this.add(this.frame);
     this.add(this.plusButton);
@@ -435,7 +431,6 @@ ListWatcherMorph.prototype.update = function (anyway) {
         starttime, maxtime = 1000;
 
     this.frame.contents.children.forEach(function (m) {
-
         if (m instanceof CellMorph
                 && m.contentsMorph instanceof ListWatcherMorph) {
             m.contentsMorph.update();
@@ -525,14 +520,13 @@ ListWatcherMorph.prototype.update = function (anyway) {
                 false,
                 false,
                 false,
-                MorphicPreferences.isFlat ? new Point() : new Point(1, 1),
+                new Point(1, 1),
                 new Color(255, 255, 255)
             );
             cell = new CellMorph(
                 this.list.at(idx),
                 this.cellColor,
-                idx,
-                this.parentCell
+                idx
             );
             button = new PushButtonMorph(
                 this.list.remove,

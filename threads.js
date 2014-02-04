@@ -6,12 +6,12 @@
     based on morphic.js and blocks.js
     inspired by Scratch, Scheme and Squeak
 
-    written by Jens MÃ¶nig
+    written by Jens Mšnig
     jens@moenig.org
 
-    Copyright (C) 2013 by Jens MÃ¶nig
+    Copyright (C) 2013 by Jens Mšnig
 
-    This file is part of Snap!.
+    This file is part of Snap!. 
 
     Snap! is free software: you can redistribute it and/or modify
     it under the terms of the GNU Affero General Public License as
@@ -61,7 +61,7 @@ ReporterBlockMorph, ScriptsMorph, ShadowMorph, StringMorph,
 SyntaxElementMorph, TextMorph, WorldMorph, blocksVersion, contains,
 degrees, detect, getDocumentPositionOf, newCanvas, nop, radians,
 useBlurredShadows, ReporterSlotMorph, CSlotMorph, RingMorph, IDE_Morph,
-ArgLabelMorph, localize, XML_Element, hex_sha512*/
+ArgLabelMorph, localize*/
 
 // globals from objects.js:
 
@@ -83,7 +83,7 @@ ArgLabelMorph, localize, XML_Element, hex_sha512*/
 
 // Global stuff ////////////////////////////////////////////////////////
 
-modules.threads = '2013-August-12';
+modules.threads = '2013-March-13';
 
 var ThreadManager;
 var Process;
@@ -129,9 +129,6 @@ ThreadManager.prototype.startProcess = function (block, isThreadSafe) {
     var active = this.findProcess(block),
         top = block.topBlock(),
         newProc;
-
-    logFile = "";
-
     if (active) {
         if (isThreadSafe) {
             return active;
@@ -342,7 +339,7 @@ Process.prototype.runStep = function () {
     a step is an an uninterruptable 'atom', it can consist
     of several contexts, even of several blocks
 */
-    if (this.isPaused) { // allow pausing in between atomic steps:
+    if (this.isPaused) {
         return this.pauseStep();
     }
     this.readyToYield = false;
@@ -351,10 +348,6 @@ Process.prototype.runStep = function () {
             && (this.isAtomic ?
                     (Date.now() - this.lastYield < this.timeout) : true)
                 ) {
-        // also allow pausing inside atomic steps - for PAUSE block primitive:
-        if (this.isPaused) {
-            return this.pauseStep();
-        }
         this.evaluateContext();
     }
     this.lastYield = Date.now();
@@ -751,7 +744,8 @@ Process.prototype.evaluate = function (
         extra,
         parms = args.asArray(),
         i,
-        value;
+        value,
+        upvars;
 
     if (!outer.receiver) {
         outer.receiver = context.receiver; // for custom blocks
@@ -821,7 +815,9 @@ Process.prototype.evaluate = function (
             }
         }
     }
-    if (this.context.upvars) {
+    if (upvars) {
+        runnable.upvars = upvars;
+    } else if (this.context.upvars) {
         runnable.upvars = new UpvarReference(this.context.upvars);
     }
 
@@ -1213,10 +1209,6 @@ Process.prototype.reportCDR = function (list) {
     return list.cdr();
 };
 
-Process.prototype.reportListCopy = function (list) {
-    return new List().cons(list.at(1), list.cdr());
-};
-
 Process.prototype.doAddToList = function (element, list) {
     list.add(element);
 };
@@ -1444,22 +1436,6 @@ Process.prototype.doSetFastTracking = function (bool) {
     }
 };
 
-Process.prototype.doPauseAll = function () {
-    var stage, ide;
-    if (this.homeContext.receiver) {
-        stage = this.homeContext.receiver.parentThatIsA(StageMorph);
-        if (stage) {
-            stage.threads.pauseAll(stage);
-        }
-        ide = stage.parentThatIsA(IDE_Morph);
-        if (ide) {ide.controlBar.pauseButton.refresh(); }
-    }
-};
-
-Process.prototype.doCountInputs = function (block) {
-    return block.expression.blockSpec.split('%').length - 1;
-}
-
 // Process loop primitives
 
 Process.prototype.doForever = function (body) {
@@ -1665,58 +1641,6 @@ Process.prototype.reportLastAnswer = function () {
 };
 
 // Process URI retrieval (interpolated)
-// SEAN SCOFIELD
-Process.prototype.reportURLPost = function (data, url) {
-    var response;
-    if (!this.httpRequest) {
-        this.httpRequest = new XMLHttpRequest();
-        this.httpRequest.open("POST", 'http://' + url, true);
-        this.httpRequest.setRequestHeader("Content-type","application/x-www-form-urlencoded");
-        this.httpRequest.send('code=' + data);
-    } else if (this.httpRequest.readyState === 4) {
-        response = this.httpRequest.responseText;
-        this.httpRequest = null;
-        return response;
-    }
-    this.pushContext('doYield');
-    this.pushContext();
-};
-
-// Process URI retrieval (interpolated)
-// SEAN SCOFIELD
-// Handles POST requests
-Process.prototype.post = function (url, data) {
-    xmlhttp = new XMLHttpRequest();
-    xmlhttp.open("POST",url,true);
-    xmlhttp.setRequestHeader("Content-type","application/x-www-form-urlencoded");
-    xmlhttp.send('code=' + data);
-};
-
-function receiveGrade() {
-    var message = window.location.search
-    if (message) {
-        alert(window.location.search);
-    }
-}
-// end of edit
-
-// SEAN SCOFIELD
-// Dynamically loads javascript from a url.
-Process.prototype.evalJavascript = function(text) {
-    eval(text);
-};
-
-// SEAN SCOFIELD
-// Dynamically loads javascript from a url.
-Process.prototype.loadSource = function(url) {
-    var head = document.getElementsByTagName('head')[0];
-    var script = document.createElement('script');
-    script.type = 'text/javascript';
-    script.src = url;
-
-    // Fire the loading
-    head.appendChild(script);
-};
 
 Process.prototype.reportURL = function (url) {
     var response;
@@ -1741,7 +1665,6 @@ Process.prototype.doBroadcast = function (message) {
         procs = [];
 
     if (message !== '') {
-        stage.lastMessage = message;
         stage.children.concat(stage).forEach(function (morph) {
             if (morph instanceof SpriteMorph || morph instanceof StageMorph) {
                 hats = hats.concat(morph.allHatBlocksFor(message));
@@ -1768,17 +1691,6 @@ Process.prototype.doBroadcastAndWait = function (message) {
     }
     this.pushContext('doYield');
     this.pushContext();
-};
-
-Process.prototype.getLastMessage = function () {
-    var stage;
-    if (this.homeContext.receiver) {
-        stage = this.homeContext.receiver.parentThatIsA(StageMorph);
-        if (stage) {
-            return stage.getLastMessage();
-        }
-    }
-    return '';
 };
 
 // Process type inference
@@ -1909,10 +1821,10 @@ Process.prototype.reportIsIdentical = function (a, b) {
     }
 
     function clear() {
-        if (Object.prototype.hasOwnProperty.call(a, tag)) {
+        if (a.hasOwnProperty(tag)) {
             delete a[tag];
         }
-        if (Object.prototype.hasOwnProperty.call(b, tag)) {
+        if (b.hasOwnProperty(tag)) {
             delete b[tag];
         }
     }
@@ -1955,9 +1867,6 @@ Process.prototype.reportMonadic = function (fname, n) {
     case 'abs':
         result = Math.abs(x);
         break;
-    case 'floor':
-        result = Math.floor(x);
-        break;
     case 'sqrt':
         result = Math.sqrt(x);
         break;
@@ -1990,37 +1899,6 @@ Process.prototype.reportMonadic = function (fname, n) {
         break;
     case '10^':
         result = 0;
-        break;
-    default:
-    }
-    return result;
-};
-
-Process.prototype.reportTextFunction = function (fname, string) {
-    var x = (isNil(string) ? '' : string).toString(),
-        result = '';
-
-    switch (this.inputOption(fname)) {
-    case 'encode URI':
-        result = encodeURI(x);
-        break;
-    case 'decode URI':
-        result = decodeURI(x);
-        break;
-    case 'encode URI component':
-        result = encodeURIComponent(x);
-        break;
-    case 'decode URI component':
-        result = decodeURIComponent(x);
-        break;
-    case 'XML escape':
-        result = new XML_Element().escape(x);
-        break;
-    case 'XML unescape':
-        result = new XML_Element().unescape(x);
-        break;
-    case 'hex sha512 hash':
-        result = hex_sha512(x);
         break;
     default:
     }
@@ -2061,27 +1939,6 @@ Process.prototype.reportUnicode = function (string) {
 Process.prototype.reportUnicodeAsLetter = function (num) {
     var code = parseFloat(num || 0);
     return String.fromCharCode(code);
-};
-
-Process.prototype.reportTextSplit = function (string, delimiter) {
-    var str = (string || '').toString(),
-        del;
-    switch (this.inputOption(delimiter)) {
-    case 'line':
-        del = '\n';
-        break;
-    case 'tab':
-        del = '\t';
-        break;
-    case 'cr':
-        del = '\r';
-        break;
-    case 'whitespace':
-        return new List(str.trim().split(/[\t\r\n ]+/));
-    default:
-        del = (delimiter || '').toString();
-    }
-    return new List(str.split(del));
 };
 
 // Process debugging
@@ -2221,169 +2078,35 @@ Process.prototype.createClone = function (name) {
     }
 };
 
-// SEAN SCOFIELD, ALEKS KAMKO
-// initialize globals in code
-Process.prototype.reportGlobals = function () {
-    var script = '';
-    script +=
-        this.translateGlobalVars() +
-        this.translateCustomBlocks() + this.translateBroadcastFunctions();
-    return script;
-
-}
-String.prototype.capitalize = function(){
-   return this.replace( /(^|\s)([a-z])/g , function(m,p1,p2){ return p1+p2.toUpperCase(); } );
-  };
-
-Process.prototype.translateGlobalVars = function () {
-    var varFrame = world.children[0].stage.variables.parentFrame.vars,
-    script = '__answer__ = None\n';
-    for (var key in varFrame) {
-        value = varFrame[key];
-        script += key.toString().replace(/[&\/\\#,+()$~%.'":*?<>{}=-]/g, '').replace(/[ ]/g, "_");
-        if (!value) {
-            script += ' = None\n'
-        } else if (value instanceof List) {
-            array = value.asArray(), value = '[';
-            for (var i = 0; i < array.length; i++) {
-                value += '"' + array[i] + '", ';
-            }
-            if (value == '[') {
-                value = value.slice(0) + ']'
-            } else {
-            value = value.slice(0, -2) + ']';
-                }
-            script += ' = ' + value + '\n';
-            } else if (typeof value == 'boolean') {
-                script += ' = ' + value.toString().capitalize() + '\n';
-                } else if (typeof value == 'string') {
-                    script += ' = ' + '"' + value.toString() + '"' + '\n';
-                    } else {
-                        script += ' = ' + value.toString() + '\n';
-                        }
-    }
-    return script;
-}
-
-Process.prototype.translateCustomBlocks = function () {
-    var stage = world.children[0].stage,
-        code = "";
-
-    for (var i = 0; i < stage.globalBlocks.length; i++) {
-        var name,
-            params = "",
-            body;
-
-        if (stage.globalBlocks[i].body && !(stage.globalBlocks[i].codeMapping)) {
-            body = this.reportMappedCode(stage.globalBlocks[i].body).split("\n");
-            name = stage.globalBlocks[i].spec.replace(/[&\/\\#,+()$~%.'":*?<>{}=-]/g, '');
-            name = name.replace(/[ ]/g, "_");
-            if (stage.globalBlocks[i].body.inputs) {
-                params = stage.globalBlocks[i].body.inputs.toString();
-            }
-            code += "def " + name + "(" + params + "):\n";
-            body.forEach(function (line) {
-                code += "    " + line + "\n";
-            });
-            code += "\n"
-        }
-    }
-
-    return code;
-};
-
-Process.prototype.translateBroadcastFunctions = function () {
-    var stageScripts = world.children[0].currentSprite.scripts.children,
-    code = "";
-    for (i = 0; i < stageScripts.length; i++) {
-        console.log(stageScripts);
-        if (stageScripts[i].selector == "receiveMessage") { // SEAN SCOFIELD; mapping code across broadcast blocks
-            var block = stageScripts[i],
-            message = block.inputs()[0].children[0].text,
-            body = block.children[block.children.length - 1].mappedCode();
-            body = body.split('\n');
-            console.log('hello');
-            for (p = 0; p < body.length; p++) {
-                body[p] = '    ' + body[p];
-            }
-            body = body.join('\n');
-            funcName = message.replace(/[ ]/g, "_");
-
-            code += "def " + funcName + "():\n" + body;
-            code += "\n\n";
-        }
-    }
-
-    return code;
-}
-// End of edit
-
 // Process sensing primitives
 
 Process.prototype.reportTouchingObject = function (name) {
-    var thisObj = this.homeContext.receiver;
-
-    if (thisObj) {
-        return this.objectTouchingObject(thisObj, name);
-    }
-    return false;
-};
-
-Process.prototype.objectTouchingObject = function (thisObj, name) {
-    // helper function for reportTouchingObject()
-    // also check for temparary clones, as in Scratch 2.0,
-    // and for any parts (subsprites)
-    var myself = this,
+    // also check for temparary clones, as in Scratch 2.0
+    var thisObj = this.homeContext.receiver,
         those,
         stage,
         mouse;
 
-    if (this.inputOption(name) === 'mouse-pointer') {
-        mouse = thisObj.world().hand.position();
-        if (thisObj.bounds.containsPoint(mouse) &&
-                !thisObj.isTransparentAt(mouse)) {
-            return true;
+    if (thisObj) {
+        if (this.inputOption(name) === 'mouse-pointer') {
+            mouse = thisObj.world().hand.position();
+            if (thisObj.bounds.containsPoint(mouse)) {
+                return !thisObj.isTransparentAt(mouse);
+            }
+            return false;
         }
-    } else {
         stage = thisObj.parentThatIsA(StageMorph);
         if (stage) {
-            if (this.inputOption(name) === 'edge' &&
-                    !stage.bounds.containsRectangle(thisObj.bounds)) {
-                return true;
+            if (this.inputOption(name) === 'edge') {
+                return !stage.bounds.containsRectangle(thisObj.bounds);
             }
-            if (this.inputOption(name) === 'pen trails' &&
-                    thisObj.isTouching(stage.penTrailsMorph())) {
-                return true;
+            if (this.inputOption(name) === 'pen trails') {
+                return thisObj.isTouching(stage.penTrailsMorph());
             }
             those = this.getObjectsNamed(name, thisObj, stage); // clones
-            if (those.some(function (any) {
-                    return thisObj.isTouching(any);
-                })) {
-                return true;
-            }
-        }
-    }
-    return thisObj.parts.some(
-        function (any) {
-            return myself.objectTouchingObject(any, name);
-        }
-    );
-};
-
-Process.prototype.reportTouchingColor = function (aColor) {
-    // also check for any parts (subsprites)
-    var thisObj = this.homeContext.receiver,
-        stage;
-
-    if (thisObj) {
-        stage = thisObj.parentThatIsA(StageMorph);
-        if (stage) {
-            if (thisObj.isTouching(stage.colorFiltered(aColor, thisObj))) {
-                return true;
-            }
-            return thisObj.parts.some(
+            return those.some(
                 function (any) {
-                    return any.isTouching(stage.colorFiltered(aColor, any));
+                    return thisObj.isTouching(any);
                 }
             );
         }
@@ -2391,25 +2114,28 @@ Process.prototype.reportTouchingColor = function (aColor) {
     return false;
 };
 
-Process.prototype.reportColorIsTouchingColor = function (color1, color2) {
-    // also check for any parts (subsprites)
+Process.prototype.reportTouchingColor = function (aColor) {
     var thisObj = this.homeContext.receiver,
         stage;
 
     if (thisObj) {
         stage = thisObj.parentThatIsA(StageMorph);
         if (stage) {
-            if (thisObj.colorFiltered(color1).isTouching(
-                    stage.colorFiltered(color2, thisObj)
-                )) {
-                return true;
-            }
-            return thisObj.parts.some(
-                function (any) {
-                    return any.colorFiltered(color1).isTouching(
-                        stage.colorFiltered(color2, any)
-                    );
-                }
+            return thisObj.isTouching(stage.colorFiltered(aColor, thisObj));
+        }
+    }
+    return false;
+};
+
+Process.prototype.reportColorIsTouchingColor = function (color1, color2) {
+    var thisObj = this.homeContext.receiver,
+        stage;
+
+    if (thisObj) {
+        stage = thisObj.parentThatIsA(StageMorph);
+        if (stage) {
+            return thisObj.colorFiltered(color1).isTouching(
+                stage.colorFiltered(color2, thisObj)
             );
         }
     }
@@ -2547,73 +2273,6 @@ Process.prototype.reportTimer = function () {
         }
     }
     return 0;
-};
-
-// Process code mapping
-
-/*
-    for generating textual source code using
-    blocks - not needed to run or debug Snap
-*/
-
-Process.prototype.doMapCodeOrHeader = function (aContext, anOption, aString) {
-    if (this.inputOption(anOption) === 'code') {
-        return this.doMapCode(aContext, aString);
-    }
-    if (this.inputOption(anOption) === 'header') {
-        return this.doMapHeader(aContext, aString);
-    }
-    throw new Error(
-        ' \'' + anOption + '\'\nis not a valid option'
-    );
-};
-
-Process.prototype.doMapHeader = function (aContext, aString) {
-    if (aContext instanceof Context) {
-        if (aContext.expression instanceof SyntaxElementMorph) {
-            return aContext.expression.mapHeader(aString || '');
-        }
-    }
-};
-
-Process.prototype.doMapCode = function (aContext, aString) {
-    if (aContext instanceof Context) {
-        if (aContext.expression instanceof SyntaxElementMorph) {
-            return aContext.expression.mapCode(aString || '');
-        }
-    }
-};
-
-Process.prototype.doMapStringCode = function (aString) {
-    StageMorph.prototype.codeMappings.string = aString || '<#1>';
-};
-
-Process.prototype.doMapListCode = function (part, kind, aString) {
-    var key1 = '',
-        key2 = 'delim';
-
-    if (this.inputOption(kind) === 'parameters') {
-        key1 = 'parms_';
-    } else if (this.inputOption(kind) === 'variables') {
-        key1 = 'tempvars_';
-    }
-
-    if (this.inputOption(part) === 'list') {
-        key2 = 'list';
-    } else if (this.inputOption(part) === 'item') {
-        key2 = 'item';
-    }
-
-    StageMorph.prototype.codeMappings[key1 + key2] = aString || '';
-};
-
-Process.prototype.reportMappedCode = function (aContext) {
-    if (aContext instanceof Context) {
-        if (aContext.expression instanceof SyntaxElementMorph) {
-            return aContext.expression.mappedCode();
-        }
-    }
-    return '';
 };
 
 // Process music primitives
@@ -3051,7 +2710,7 @@ VariableFrame.prototype.deleteVar = function (name) {
 VariableFrame.prototype.names = function () {
     var each, names = [];
     for (each in this.vars) {
-        if (Object.prototype.hasOwnProperty.call(this.vars, each)) {
+        if (this.vars.hasOwnProperty(each)) {
             names.push(each);
         }
     }
@@ -3064,7 +2723,7 @@ VariableFrame.prototype.allNamesDict = function () {
     function addKeysToDict(srcDict, trgtDict) {
         var eachKey;
         for (eachKey in srcDict) {
-            if (Object.prototype.hasOwnProperty.call(srcDict, eachKey)) {
+            if (srcDict.hasOwnProperty(eachKey)) {
                 trgtDict[eachKey] = eachKey;
             }
         }
@@ -3085,7 +2744,7 @@ VariableFrame.prototype.allNames = function () {
     var answer = [], each, dict = this.allNamesDict();
 
     for (each in dict) {
-        if (Object.prototype.hasOwnProperty.call(dict, each)) {
+        if (dict.hasOwnProperty(each)) {
             answer.push(each);
         }
     }

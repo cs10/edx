@@ -6,12 +6,12 @@
     based on morphic.js
     inspired by Scratch
 
-    written by Jens Mönig
+    written by Jens Mnig
     jens@moenig.org
 
-    Copyright (C) 2013 by Jens Mönig
+    Copyright (C) 2013 by Jens Mnig
 
-    This file is part of Snap!.
+    This file is part of Snap!. 
 
     Snap! is free software: you can redistribute it and/or modify
     it under the terms of the GNU Affero General Public License as
@@ -55,7 +55,6 @@
                         ReporterSlotMorph
                             RingReporterSlotMorph
                     InputSlotMorph
-                        TextSlotMorph
                     MultiArgMorph
                     TemplateSlotMorph
                 BlockMorph
@@ -88,7 +87,6 @@
         InputSlotMorph
         BooleanSlotMorph
         ArrowMorph
-        TextSlotMorph
         SymbolMorph
         ColorSlotMorph
         TemplateSlotMorph
@@ -155,7 +153,7 @@ DialogBoxMorph, BlockInputFragmentMorph, PrototypeHatBlockMorph*/
 
 // Global stuff ////////////////////////////////////////////////////////
 
-modules.blocks = '2013-August-02';
+modules.blocks = '2013-March-22';
 
 var SyntaxElementMorph;
 var BlockMorph;
@@ -181,22 +179,21 @@ var RingReporterSlotMorph;
 var SymbolMorph;
 var CommentMorph;
 var ArgLabelMorph;
-var TextSlotMorph;
 
 WorldMorph.prototype.customMorphs = function () {
     // add examples to the world's demo menu
 
-    return [];
+    return [hello];
 
 /*
     return [
         new SymbolMorph(
-            'pipette',
+            'flash',
             50,
-            new Color(250, 250, 250),
+            new Color(250, 250, 0),
             new Point(-1, -1),
-            new Color(20, 20, 20)
-        )
+            new Color(0, 0, 200)
+        ),
     ];
 */
 /*
@@ -412,22 +409,9 @@ SyntaxElementMorph.prototype.allEmptySlots = function () {
 
 SyntaxElementMorph.prototype.replaceInput = function (oldArg, newArg) {
     var scripts = this.parentThatIsA(ScriptsMorph),
-        replacement = newArg,
+        replacement,
         idx = this.children.indexOf(oldArg),
-        i = 0,
         nb;
-
-    // try to find the ArgLabel embedding the newArg,
-    // used for the undrop() feature
-    if (idx === -1 && newArg instanceof MultiArgMorph) {
-        this.children.forEach(function (morph) {
-            if (morph instanceof ArgLabelMorph &&
-                    morph.argMorph() === oldArg) {
-                idx = i;
-            }
-            i += 1;
-        });
-    }
 
     if ((idx === -1) || (scripts === null)) {
         return null;
@@ -436,14 +420,13 @@ SyntaxElementMorph.prototype.replaceInput = function (oldArg, newArg) {
     if (newArg.parent) {
         newArg.parent.removeChild(newArg);
     }
-    if (oldArg instanceof MultiArgMorph) {
-        oldArg.inputs().forEach(function (inp) { // preserve nested reporters
-            oldArg.replaceInput(inp, new InputSlotMorph());
-        });
-        if (this.dynamicInputLabels) {
-            replacement = new ArgLabelMorph(newArg);
-        }
+
+    if (oldArg instanceof MultiArgMorph && this.dynamicInputLabels) {
+        replacement = new ArgLabelMorph(newArg);
+    } else {
+        replacement = newArg;
     }
+
     replacement.parent = this;
     this.children[idx] = replacement;
     if (oldArg instanceof ReporterBlockMorph) {
@@ -461,6 +444,7 @@ SyntaxElementMorph.prototype.replaceInput = function (oldArg, newArg) {
             nb.fixBlockColor();
         }
     }
+
     if (replacement instanceof MultiArgMorph
             || replacement instanceof ArgLabelMorph
             || replacement.constructor === CommandSlotMorph) {
@@ -574,7 +558,8 @@ SyntaxElementMorph.prototype.reactToGrabOf = function (grabbedMorph) {
             comment.align(topBlock);
         });
         if (topBlock.getHighlight()) {
-            topBlock.addHighlight(topBlock.removeHighlight());
+            topBlock.removeHighlight();
+            topBlock.addHighlight();
         }
     }
 };
@@ -643,9 +628,8 @@ SyntaxElementMorph.prototype.fixBlockColor = function (
 
 SyntaxElementMorph.prototype.labelPart = function (spec) {
     var part;
-    if (spec[0] === '%' &&
-            spec.length > 1 &&
-            this.selector !== 'reportGetVar') {
+    if ((spec[0] === '%') && (spec.length > 1)) {
+
         // check for variable multi-arg-slot:
         if ((spec.length > 5) && (spec.slice(0, 5) === '%mult')) {
             part = new MultiArgMorph(spec.slice(5));
@@ -737,16 +721,6 @@ SyntaxElementMorph.prototype.labelPart = function (spec) {
             part.minWidth = part.height() * 1.7; // "landscape"
             part.fixLayout();
             break;
-        case '%mlt':
-            part = new TextSlotMorph();
-            part.fixLayout();
-            break;
-        case '%code':
-            part = new TextSlotMorph();
-            part.contents().fontName = 'monospace';
-            part.contents().fontStyle = 'monospace';
-            part.fixLayout();
-            break;
         case '%obj':
             part = new ArgMorph('object');
             break;
@@ -801,19 +775,6 @@ SyntaxElementMorph.prototype.labelPart = function (spec) {
                     'December' : ['December']
                 },
                 true // read-only
-            );
-            break;
-        case '%delim':
-            part = new InputSlotMorph(
-                null, // text
-                false, // numeric?
-                {
-                    'whitespace' : ['whitespace'],
-                    'line' : ['line'],
-                    'tab' : ['tab'],
-                    'cr' : ['cr']
-                },
-                false // read-only
             );
             break;
         case '%ida':
@@ -975,7 +936,7 @@ SyntaxElementMorph.prototype.labelPart = function (spec) {
             part = new InputSlotMorph(
                 null,
                 false,
-                'messagesReceivedMenu',
+                'messagesMenu',
                 true
             );
             part.isStatic = true;
@@ -995,7 +956,6 @@ SyntaxElementMorph.prototype.labelPart = function (spec) {
                 false,
                 {
                     abs : ['abs'],
-                    floor : ['floor'],
                     sqrt : ['sqrt'],
                     sin : ['sin'],
                     cos : ['cos'],
@@ -1011,23 +971,6 @@ SyntaxElementMorph.prototype.labelPart = function (spec) {
                 true
             );
             part.setContents(['sqrt']);
-            break;
-        case '%txtfun':
-            part = new InputSlotMorph(
-                null,
-                false,
-                {
-                    'encode URI' : ['encode URI'],
-                    'decode URI' : ['decode URI'],
-                    'encode URI component' : ['encode URI component'],
-                    'decode URI component' : ['decode URI component'],
-                    'XML escape' : ['XML escape'],
-                    'XML unescape' : ['XML unescape'],
-                    'hex sha512 hash' : ['hex sha512 hash']
-                },
-                true
-            );
-            part.setContents(['encode URI']);
             break;
         case '%typ':
             part = new InputSlotMorph(
@@ -1068,18 +1011,6 @@ SyntaxElementMorph.prototype.labelPart = function (spec) {
                 },
                 true
             );
-            break;
-        case '%codeKind':
-            part = new InputSlotMorph(
-                null,
-                false,
-                {
-                    code : ['code'],
-                    header : ['header']
-                },
-                true
-            );
-            part.setContents(['code']);
             break;
         case '%l':
             part = new ArgMorph('list');
@@ -1130,34 +1061,6 @@ SyntaxElementMorph.prototype.labelPart = function (spec) {
             part = new ReporterSlotMorph(true);
             break;
 
-    // code mapping (experimental)
-
-        case '%codeListPart':
-            part = new InputSlotMorph(
-                null, // text
-                false, // numeric?
-                {
-                    'list' : ['list'],
-                    'item' : ['item'],
-                    'delimiter' : ['delimiter']
-                },
-                true // read-only
-            );
-            break;
-        case '%codeListKind':
-            part = new InputSlotMorph(
-                null, // text
-                false, // numeric?
-                {
-                    'collection' : ['collection'],
-                    'variables' : ['variables'],
-                    'parameters' : ['parameters']
-                },
-                true // read-only
-            );
-            break;
-
-
     // symbols:
 
         case '%turtle':
@@ -1165,8 +1068,7 @@ SyntaxElementMorph.prototype.labelPart = function (spec) {
             part.size = this.fontSize * 1.2;
             part.color = new Color(255, 255, 255);
             part.shadowColor = this.color.darker(this.labelContrast);
-            part.shadowOffset = MorphicPreferences.isFlat ?
-                    new Point() : this.embossing;
+            part.shadowOffset = this.embossing;
             part.drawNew();
             break;
         case '%turtleOutline':
@@ -1175,8 +1077,7 @@ SyntaxElementMorph.prototype.labelPart = function (spec) {
             part.color = new Color(255, 255, 255);
             part.isProtectedLabel = true; // doesn't participate in zebraing
             part.shadowColor = this.color.darker(this.labelContrast);
-            part.shadowOffset = MorphicPreferences.isFlat ?
-                    new Point() : this.embossing;
+            part.shadowOffset = this.embossing;
             part.drawNew();
             break;
         case '%clockwise':
@@ -1185,8 +1086,7 @@ SyntaxElementMorph.prototype.labelPart = function (spec) {
             part.color = new Color(255, 255, 255);
             part.isProtectedLabel = false; // zebra colors
             part.shadowColor = this.color.darker(this.labelContrast);
-            part.shadowOffset = MorphicPreferences.isFlat ?
-                    new Point() : this.embossing;
+            part.shadowOffset = this.embossing;
             part.drawNew();
             break;
         case '%counterclockwise':
@@ -1195,8 +1095,7 @@ SyntaxElementMorph.prototype.labelPart = function (spec) {
             part.color = new Color(255, 255, 255);
             part.isProtectedLabel = false; // zebra colors
             part.shadowColor = this.color.darker(this.labelContrast);
-            part.shadowOffset = MorphicPreferences.isFlat ?
-                    new Point() : this.embossing;
+            part.shadowOffset = this.embossing;
             part.drawNew();
             break;
         case '%greenflag':
@@ -1205,8 +1104,7 @@ SyntaxElementMorph.prototype.labelPart = function (spec) {
             part.color = new Color(0, 200, 0);
             part.isProtectedLabel = true; // doesn't participate in zebraing
             part.shadowColor = this.color.darker(this.labelContrast);
-            part.shadowOffset = MorphicPreferences.isFlat ?
-                    new Point() : this.embossing;
+            part.shadowOffset = this.embossing;
             part.drawNew();
             break;
         case '%stop':
@@ -1215,18 +1113,7 @@ SyntaxElementMorph.prototype.labelPart = function (spec) {
             part.color = new Color(200, 0, 0);
             part.isProtectedLabel = true; // doesn't participate in zebraing
             part.shadowColor = this.color.darker(this.labelContrast);
-            part.shadowOffset = MorphicPreferences.isFlat ?
-                    new Point() : this.embossing;
-            part.drawNew();
-            break;
-        case '%pause':
-            part = new SymbolMorph('pause');
-            part.size = this.fontSize;
-            part.color = new Color(160, 80, 0);
-            part.isProtectedLabel = true; // doesn't participate in zebraing
-            part.shadowColor = this.color.darker(this.labelContrast);
-            part.shadowOffset = MorphicPreferences.isFlat ?
-                    new Point() : this.embossing;
+            part.shadowOffset = this.embossing;
             part.drawNew();
             break;
         default:
@@ -1240,8 +1127,7 @@ SyntaxElementMorph.prototype.labelPart = function (spec) {
         part.color = new Color(255, 255, 255);
         part.isBold = true;
         part.shadowColor = this.color.darker(this.labelContrast);
-        part.shadowOffset = MorphicPreferences.isFlat ?
-                new Point() : this.embossing;
+        part.shadowOffset = this.embossing;
         part.drawNew();
     }
     return part;
@@ -1490,7 +1376,8 @@ SyntaxElementMorph.prototype.fixLayout = function () {
 SyntaxElementMorph.prototype.fixHighlight = function () {
     var top = this.topBlock();
     if (top.getHighlight && top.getHighlight()) {
-        top.addHighlight(top.removeHighlight());
+        top.removeHighlight();
+        top.addHighlight();
     }
 };
 
@@ -1593,22 +1480,6 @@ SyntaxElementMorph.prototype.showBubble = function (value) {
     );
 };
 
-// SyntaxElementMorph code mapping
-
-/*
-    code mapping lets you use blocks to generate arbitrary text-based
-    source code that can be exported and compiled / embedded elsewhere,
-    it's not part of Snap's evaluator and not needed for Snap itself
-*/
-
-SyntaxElementMorph.prototype.mappedCode = function (definitions) {
-    var result = this.evaluate();
-    if (result instanceof BlockMorph) {
-        return result.mappedCode(definitions);
-    }
-    return result;
-};
-
 // SyntaxElementMorph layout update optimization
 
 SyntaxElementMorph.prototype.startLayout = function () {
@@ -1668,8 +1539,6 @@ SyntaxElementMorph.prototype.endLayout = function () {
     %br        - user-forced line break
     %s        - white rectangular type-in slot ("string-type")
     %txt    - white rectangular type-in slot ("text-type")
-    %mlt    - white rectangular type-in slot ("multi-line-text-type")
-    %code    - white rectangular type-in slot, monospaced font
     %n        - white roundish type-in slot ("numerical")
     %dir    - white roundish type-in slot with drop-down for directions
     %inst    - white roundish type-in slot with drop-down for instruments
@@ -1719,9 +1588,9 @@ SyntaxElementMorph.prototype.endLayout = function () {
     special form: upvar
 
     %upvar - same as %t (inline variable reporter template)
-
+    
     special form: input name
-
+    
     %inputName - variable blob (used in input type dialog)
 
     examples:
@@ -1908,59 +1777,17 @@ BlockMorph.prototype.rebuild = function (contrast) {
 BlockMorph.prototype.userMenu = function () {
     var menu = new MenuMorph(this),
         world = this.world(),
-        myself = this,
-        blck;
+        myself = this;
 
     menu.addItem(
         "help...",
         'showHelp'
     );
     if (this.isTemplate) {
-        if (this.selector !== 'evaluateCustomBlock') {
-            menu.addItem(
-                "hide",
-                'hidePrimitive'
-            );
-        }
-        if (StageMorph.prototype.enableCodeMapping) {
-            menu.addLine();
-            menu.addItem(
-                'header mapping...',
-                'mapToHeader'
-            );
-            menu.addItem(
-                'code mapping...',
-                'mapToCode'
-            );
-        }
         return menu;
     }
-    // ALEKS KAMKO
-    // SEAN SCOFIELD
-    // sets a hat block as the project start location
-    if (this instanceof HatBlockMorph) {
-        if (this.isProjectStart) {
-            menu.addItem(
-                "don't start project here",
-                function () {
-                    myself.projectToggle();
-                }
-            );
-        } else {
-            menu.addItem(
-                'start project here',
-                function () {
-                    myself.projectToggle();
-                }
-            );
-        }
-        menu.addLine();
-    }
-    // End of edit
     menu.addLine();
     if (this.selector === 'reportGetVar') {
-        blck = this.fullCopy();
-        blck.addShadow();
         menu.addItem(
             'rename...',
             function () {
@@ -1971,9 +1798,7 @@ BlockMorph.prototype.userMenu = function () {
                 ).prompt(
                     "Variable name",
                     myself.blockSpec,
-                    world,
-                    blck.fullImage(), // pic
-                    InputSlotMorph.prototype.getVarNamesDict.call(myself)
+                    world
                 );
             }
         );
@@ -2018,6 +1843,26 @@ BlockMorph.prototype.userMenu = function () {
         },
         'open a new window\nwith a picture of this script'
     );
+
+    // KAMKO: new feature! Script Pic to costume!
+
+    menu.addItem(
+        "script pic to costume...",
+        function () {
+            var image = myself.topBlock().fullImage()
+
+            var ide = world.children[0]
+
+            var costume = new Costume(image, 'ScriptPic'); // up to period
+            ide.currentSprite.addCostume(costume);
+            ide.currentSprite.wearCostume(costume);
+            ide.spriteBar.tabBar.tabTo('costumes');
+            ide.hasChangedMedia = true;
+        },
+        'create a new sprite\nfrom picture of this script'
+    );
+
+    
     if (this.parentThatIsA(RingMorph)) {
         menu.addLine();
         menu.addItem("unringify", 'unringify');
@@ -2032,17 +1877,6 @@ BlockMorph.prototype.userMenu = function () {
     }
     menu.addLine();
     menu.addItem("ringify", 'ringify');
-    if (StageMorph.prototype.enableCodeMapping) {
-        menu.addLine();
-        menu.addItem(
-            'header mapping...',
-            'mapToHeader'
-        );
-        menu.addItem(
-            'code mapping...',
-            'mapToCode'
-        );
-    }
     return menu;
 };
 
@@ -2063,23 +1897,6 @@ BlockMorph.prototype.developersMenu = function () {
         );
     });
     return menu;
-};
-
-BlockMorph.prototype.hidePrimitive = function () {
-    var ide = this.parentThatIsA(IDE_Morph),
-        cat;
-    if (!ide) {return; }
-    StageMorph.prototype.hiddenPrimitives[this.selector] = true;
-    cat = {
-        doWarp: 'control',
-        reifyScript: 'operators',
-        reifyReporter: 'operators',
-        reifyPredicate: 'operators',
-        doDeclareVariables: 'variables'
-    }[this.selector] || this.category;
-    if (cat === 'lists') {cat = 'variables'; }
-    ide.flushBlocksCache(cat);
-    ide.refreshPalette();
 };
 
 BlockMorph.prototype.deleteBlock = function () {
@@ -2232,10 +2049,7 @@ BlockMorph.prototype.showHelp = function () {
     var myself = this,
         pic = new Image(),
         help,
-        comment,
-        block,
-        isCustomBlock = this.selector === 'evaluateCustomBlock',
-        spec = isCustomBlock ?
+        spec = this.selector === 'evaluateCustomBlock' ?
                 this.definition.helpSpec() : this.selector,
         ctx;
 
@@ -2250,294 +2064,7 @@ BlockMorph.prototype.showHelp = function () {
             help
         );
     };
-
-    if (isCustomBlock && this.definition.comment) {
-        block = this.fullCopy();
-        block.addShadow();
-        comment = this.definition.comment.fullCopy();
-        comment.contents.parse();
-        help = '';
-        comment.contents.lines.forEach(function (line) {
-            help = help + '\n' + line;
-        });
-        new DialogBoxMorph().inform(
-            'Help',
-            help.substr(1),
-            myself.world(),
-            block.fullImage()
-        );
-    } else {
-        pic.src = 'help/' + spec + '.png';
-    }
-};
-
-// BlockMorph code mapping
-
-/*
-    code mapping lets you use blocks to generate arbitrary text-based
-    source code that can be exported and compiled / embedded elsewhere,
-    it's not part of Snap's evaluator and not needed for Snap itself
-*/
-
-BlockMorph.prototype.mapToHeader = function () {
-    // open a dialog box letting the user map header code via the GUI
-    var key = this.selector.substr(0, 5) === 'reify' ?
-            'reify' : this.selector,
-        block = this.codeDefinitionHeader(),
-        myself = this,
-        help,
-        pic;
-    block.addShadow(new Point(3, 3));
-    pic = block.fullImageClassic();
-    if (this.definition) {
-        help = 'Enter code that corresponds to the block\'s definition. ' +
-            'Use the formal parameter\nnames as shown and <body> to ' +
-            'reference the definition body\'s generated text code.';
-    } else {
-        help = 'Enter code that corresponds to the block\'s definition. ' +
-            'Choose your own\nformal parameter names (ignoring the ones ' +
-            'shown .';
-    }
-    new DialogBoxMorph(
-        this,
-        function (code) {
-            if (key === 'evaluateCustomBlock') {
-                myself.definition.codeHeader = code;
-            } else {
-                StageMorph.prototype.codeHeaders[key] = code;
-            }
-        },
-        this
-    ).promptCode(
-        'Header mapping',
-        key === 'evaluateCustomBlock' ? this.definition.codeHeader || ''
-                 : StageMorph.prototype.codeHeaders[key] || '',
-        this.world(),
-        pic,
-        help
-    );
-};
-
-BlockMorph.prototype.mapToCode = function () {
-    // open a dialog box letting the user map code via the GUI
-    var key = this.selector.substr(0, 5) === 'reify' ?
-            'reify' : this.selector,
-        block = this.codeMappingHeader(),
-        myself = this,
-        pic;
-    block.addShadow(new Point(3, 3));
-    pic = block.fullImageClassic();
-    new DialogBoxMorph(
-        this,
-        function (code) {
-            if (key === 'evaluateCustomBlock') {
-                myself.definition.codeMapping = code;
-            } else {
-                StageMorph.prototype.codeMappings[key] = code;
-            }
-        },
-        this
-    ).promptCode(
-        'Code mapping',
-        key === 'evaluateCustomBlock' ? this.definition.codeMapping || ''
-                 : StageMorph.prototype.codeMappings[key] || '',
-        this.world(),
-        pic,
-        'Enter code that corresponds to the block\'s operation ' +
-            '(usually a single\nfunction invocation). Use <#n> to ' +
-            'reference actual arguments as shown.'
-    );
-};
-
-BlockMorph.prototype.mapHeader = function (aString, key) {
-    // primitive for programatically mapping header code
-    var sel = key || this.selector.substr(0, 5) === 'reify' ?
-            'reify' : this.selector;
-    if (aString) {
-        if (this.definition) { // custom block
-            this.definition.codeHeader = aString;
-        } else {
-            StageMorph.prototype.codeHeaders[sel] = aString;
-        }
-    }
-};
-
-BlockMorph.prototype.mapCode = function (aString, key) {
-    // primitive for programatically mapping code
-    var sel = key || this.selector.substr(0, 5) === 'reify' ?
-            'reify' : this.selector;
-    if (aString) {
-        if (this.definition) { // custom block
-            this.definition.codeMapping = aString;
-        } else {
-            StageMorph.prototype.codeMappings[sel] = aString;
-        }
-    }
-};
-
-BlockMorph.prototype.mappedCode = function (definitions) {
-    var key = this.selector.substr(0, 5) === 'reify' ?
-            'reify' : this.selector,
-        code,
-        codeLines,
-        count = 1,
-        header,
-        headers,
-        headerLines,
-        body,
-        bodyLines,
-        defKey = this.definition ? this.definition.spec : key,
-        defs = definitions || {},
-        parts = [];
-
-    customDefKey = function (block) {
-        var name,
-            inputs = "";
-
-        name = block.definition.spec.replace(/[&\/\\#,+()$~%.'":*?<>{}=-]/g, '').replace(/[ ]/g, "_")
-        block.inputs().forEach(function (item) {
-            inputs += item.mappedCode() + ", ";
-        });
-        inputs = "(" + inputs.slice(0, -2) + ")";
-
-        return name + inputs;
-    };
-
-    code = key === 'reportGetVar' ? this.blockSpec.replace(/[&\/\\#,+()$~%.'":*?<>{}=-]/g, '').replace(/[ ]/g, "_")
-            : this.definition ? this.definition.codeMapping || customDefKey(this)
-                    : StageMorph.prototype.codeMappings[key] || '';
-
-    // map header
-    if (key !== 'reportGetVar' && !defs.hasOwnProperty(defKey)) {
-        defs[defKey] = null; // create the property for recursive definitions
-        if (this.definition) {
-            header = this.definition.codeHeader || '';
-            if (header.indexOf('<body') !== -1) { // replace with def mapping
-                body = '';
-                if (this.definition.body) {
-                    body = this.definition.body.expression.mappedCode(defs);
-                }
-                bodyLines = body.split('\n');
-                headerLines = header.split('\n');
-                headerLines.forEach(function (headerLine, idx) {
-                    var prefix = '',
-                        indent;
-                    if (headerLine.trimLeft().indexOf('<body') === 0) {
-                        indent = headerLine.indexOf('<body');
-                        prefix = headerLine.slice(0, indent);
-                    }
-                    headerLines[idx] = headerLine.replace(
-                        new RegExp('<body>'),
-                        bodyLines.join('\n' + prefix)
-                    );
-                    headerLines[idx] = headerLines[idx].replace(
-                        new RegExp('<body>', 'g'),
-                        bodyLines.join('\n')
-                    );
-                });
-                header = headerLines.join('\n');
-            }
-            defs[defKey] = header;
-        } else {
-            defs[defKey] = StageMorph.prototype.codeHeaders[defKey];
-        }
-    }
-
-    codeLines = code.split('\n');
-    this.inputs().forEach(function (input) {
-        // SEAN SCOFIELD
-        if (input.mappedCode()) {
-            parts.push(input.mappedCode(defs).toString());
-        } else {
-            parts.push('');
-        }
-    });
-    // end of edit
-
-    parts.forEach(function (part) {
-        var partLines = part.split('\n'),
-            placeHolder = '<#' + count + '>',
-            rx = new RegExp(placeHolder, 'g');
-        codeLines.forEach(function (codeLine, idx) {
-            var prefix = '',
-                indent;
-            if (codeLine.trimLeft().indexOf(placeHolder) === 0) {
-                indent = codeLine.indexOf(placeHolder);
-                prefix = codeLine.slice(0, indent);
-            }
-            codeLines[idx] = codeLine.replace(
-                new RegExp(placeHolder),
-                partLines.join('\n' + prefix)
-            );
-            codeLines[idx] = codeLines[idx].replace(rx, partLines.join('\n'));
-        });
-        count += 1;
-    });
-    code = codeLines.join('\n');
-    if (this.nextBlock && this.nextBlock()) { // Command
-        code += ('\n' + this.nextBlock().mappedCode(defs));
-    }
-    if (this.selector == "doBroadcast") { // SEAN SCOFIELD; mapping code across broadcast blocks
-        var message = this.inputs()[0].children[0].text;
-        code += message + "()\n";
-    } // end of edit
-    if (!definitions) { // top-level, add headers
-        headers = [];
-        Object.keys(defs).forEach(function (each) {
-            if (defs[each]) {
-                headers.push(defs[each]);
-            }
-        });
-        if (headers.length) {
-            return headers.join('\n\n')
-                + '\n\n'
-                + code;
-        }
-    }
-    return code;
-};
-
-BlockMorph.prototype.codeDefinitionHeader = function () {
-    var block = this.definition ? new PrototypeHatBlockMorph(this.definition)
-            : SpriteMorph.prototype.blockForSelector(this.selector),
-        hat = new HatBlockMorph(),
-        count = 1;
-
-    if (this.definition) {return block; }
-    block.inputs().forEach(function (input) {
-        var part = new TemplateSlotMorph('#' + count);
-        block.silentReplaceInput(input, part);
-        count += 1;
-    });
-    block.isPrototype = true;
-    hat.setCategory("control");
-    hat.setSpec('%s');
-    hat.silentReplaceInput(hat.inputs()[0], block);
-    if (this.category === 'control') {
-        hat.alternateBlockColor();
-    }
-    return hat;
-};
-
-BlockMorph.prototype.codeMappingHeader = function () {
-    var block = this.definition ? this.definition.blockInstance()
-            : SpriteMorph.prototype.blockForSelector(this.selector),
-        hat = new HatBlockMorph(),
-        count = 1;
-
-    block.inputs().forEach(function (input) {
-        var part = new TemplateSlotMorph('<#' + count + '>');
-        block.silentReplaceInput(input, part);
-        count += 1;
-    });
-    block.isPrototype = true;
-    hat.setCategory("control");
-    hat.setSpec('%s');
-    hat.silentReplaceInput(hat.inputs()[0], block);
-    if (this.category === 'control') {
-        hat.alternateBlockColor();
-    }
-    return hat;
+    pic.src = 'help/' + spec + '.png';
 };
 
 // BlockMorph drawing
@@ -2593,13 +2120,13 @@ BlockMorph.prototype.eraseHoles = function (context) {
 
 // BlockMorph highlighting
 
-BlockMorph.prototype.addHighlight = function (oldHighlight) {
+BlockMorph.prototype.addHighlight = function () {
     var isHidden = !this.isVisible,
         highlight;
 
     if (isHidden) {this.show(); }
     highlight = this.highlight(
-        oldHighlight ? oldHighlight.color : this.activeHighlight,
+        this.activeHighlight,
         this.activeBlur,
         this.activeBorder
     );
@@ -2632,7 +2159,6 @@ BlockMorph.prototype.removeHighlight = function () {
         this.fullChanged();
         this.removeChild(highlight);
     }
-    return highlight;
 };
 
 BlockMorph.prototype.toggleHighlight = function () {
@@ -2646,11 +2172,9 @@ BlockMorph.prototype.toggleHighlight = function () {
 BlockMorph.prototype.highlight = function (color, blur, border) {
     var highlight = new BlockHighlightMorph(),
         fb = this.fullBounds(),
-        edge = useBlurredShadows && !MorphicPreferences.isFlat ?
-                blur : border;
+        edge = useBlurredShadows ? blur : border;
     highlight.setExtent(fb.extent().add(edge * 2));
-    highlight.color = color;
-    highlight.image = useBlurredShadows && !MorphicPreferences.isFlat ?
+    highlight.image = useBlurredShadows ?
             this.highlightImageBlurred(color, blur)
                 : this.highlightImage(color, border);
     highlight.setPosition(fb.origin.subtract(new Point(edge, edge)));
@@ -2776,62 +2300,19 @@ BlockMorph.prototype.forceNormalColoring = function () {
 };
 
 BlockMorph.prototype.alternateBlockColor = function () {
-    if (!this.isProjectStart) {
-        var clr = SpriteMorph.prototype.blockColor[this.category];
-
-        if (this.color.eq(clr)) {
-            this.setColor(
-                this.zebraContrast < 0 ? clr.darker(Math.abs(this.zebraContrast))
-                    : clr.lighter(this.zebraContrast)
-            );
-        } else {
-            this.setColor(clr);
-        }
-        this.fixLabelColor();
-        this.fixChildrensBlockColor(true); // has issues if not forced
-    }
-    // End of edit
-};
-
-// ALEKS KAMKO
-// SEAN SCOFIELD
-// Function to set a hat block as the start of a project. Turns the hat block
-// white and the flag blue.
-BlockMorph.prototype.projectToggle = function () {
-    var clr = SpriteMorph.prototype.blockColor[this.category],
-        curProjectStart = this.parentThatIsA(IDE_Morph).stage.projectStart;
+    var clr = SpriteMorph.prototype.blockColor[this.category];
 
     if (this.color.eq(clr)) {
-        if (this.children[1].name == "flag") {
-            this.children[1].color.r = 60;
-            this.children[1].color.b = 255;
-            this.children[1].color.g = 60;
-        }
-        this.setColor(new Color(240, 240, 240, 1));
-        this.isProjectStart = true;
-
-        if (curProjectStart) {
-            this.parentThatIsA(IDE_Morph).stage.projectStart.projectToggle();
-        }
-
-        this.parentThatIsA(IDE_Morph).stage.projectStart = this;
-
+        this.setColor(
+            this.zebraContrast < 0 ? clr.darker(Math.abs(this.zebraContrast))
+                : clr.lighter(this.zebraContrast)
+        );
     } else {
-        if (this.children[1].name == "flag") {
-            this.children[1].color.r = 0;
-            this.children[1].color.b = 0;
-            this.children[1].color.g = 200;
-        }
         this.setColor(clr);
-        this.isProjectStart = undefined;
-
-        this.parentThatIsA(IDE_Morph).stage.projectStart = undefined;
-
     }
     this.fixLabelColor();
     this.fixChildrensBlockColor(true); // has issues if not forced
 };
-// End of edit
 
 BlockMorph.prototype.fixLabelColor = function () {
     if (this.zebraContrast > 0 && this.category) {
@@ -2840,14 +2321,14 @@ BlockMorph.prototype.fixLabelColor = function () {
             this.setLabelColor(
                 new Color(255, 255, 255),
                 clr.darker(this.labelContrast),
-                MorphicPreferences.isFlat ? null : new Point(-1, -1)
+                new Point(-1, -1)
             );
         } else {
             this.setLabelColor(
                 new Color(0, 0, 0),
                 clr.lighter(this.zebraContrast)
                     .lighter(this.labelContrast * 2),
-                MorphicPreferences.isFlat ? null : new Point(1, 1)
+                new Point(1, 1)
             );
         }
     }
@@ -2883,11 +2364,7 @@ BlockMorph.prototype.fullCopy = function () {
     ans.allChildren().filter(function (block) {
         return !isNil(block.comment);
     }).forEach(function (block) {
-        var cmnt = block.comment.fullCopy();
-        block.comment = cmnt;
-        cmnt.block = block;
-        //block.comment = null;
-
+        block.comment = null;
     });
     return ans;
 };
@@ -2923,8 +2400,7 @@ BlockMorph.prototype.thumbnail = function (scale, clipWidth, noShadow) {
     if (!noShadow) {block.addShadow(); }
     ext = block.fullBounds().extent();
     if (!noShadow) {
-        ext = ext.subtract(this.shadowBlur *
-            (useBlurredShadows && !MorphicPreferences.isFlat ? 1 : 2));
+        ext = ext.subtract(this.shadowBlur * (useBlurredShadows ? 1 : 2));
     }
     trgt = newCanvas(new Point(
         Math.min(ext.x * scale, clipWidth || ext.x),
@@ -3021,13 +2497,6 @@ BlockMorph.prototype.allComments = function () {
     });
 };
 
-BlockMorph.prototype.destroy = function () {
-    this.allComments().forEach(function (comment) {
-        comment.destroy();
-    });
-    BlockMorph.uber.destroy.call(this);
-};
-
 BlockMorph.prototype.stackHeight = function () {
     var fb = this.fullBounds(),
         commentsBottom = Math.max(this.allComments().map(
@@ -3046,7 +2515,8 @@ BlockMorph.prototype.snap = function () {
         this.removeHighlight();
     }
     if (top.getHighlight()) {
-        top.addHighlight(top.removeHighlight());
+        top.removeHighlight();
+        top.addHighlight();
     }
 };
 
@@ -3242,13 +2712,9 @@ CommandBlockMorph.prototype.closestAttachTarget = function (newParent) {
 
 CommandBlockMorph.prototype.snap = function () {
     var target = this.closestAttachTarget(),
-        scripts = this.parentThatIsA(ScriptsMorph),
         next,
         offsetY,
         affected;
-
-    scripts.clearDropHistory();
-    scripts.lastDroppedBlock = this;
 
     if (target === null) {
         this.startLayout();
@@ -3257,23 +2723,17 @@ CommandBlockMorph.prototype.snap = function () {
         CommandBlockMorph.uber.snap.call(this); // align stuck comments
         return;
     }
-
-    scripts.lastDropTarget = target;
-
     this.startLayout();
     if (target.loc === 'bottom') {
         if (target.type === 'slot') {
-            this.removeHighlight();
-            scripts.lastNextBlock = target.element.nestedBlock();
             target.element.nestedBlock(this);
         } else {
-            scripts.lastNextBlock = target.element.nextBlock();
             target.element.nextBlock(this);
         }
         if (this.isStop()) {
             next = this.nextBlock();
             if (next) {
-                scripts.add(next);
+                this.parentThatIsA(ScriptsMorph).add(next);
                 next.moveBy(this.extent().floorDivideBy(2));
                 affected = this.parentThatIsA(CommandSlotMorph);
                 if (affected) {
@@ -3282,7 +2742,6 @@ CommandBlockMorph.prototype.snap = function () {
             }
         }
     } else if (target.loc === 'top') {
-        target.element.removeHighlight();
         offsetY = this.bottomBlock().bottom() - this.bottom();
         this.setBottom(target.element.top() + this.corner - offsetY);
         this.setLeft(target.element.left());
@@ -3334,21 +2793,12 @@ CommandBlockMorph.prototype.drawNew = function () {
     this.drawBottom(context);
 
     // add 3D-Effect:
-    if (!MorphicPreferences.isFlat) {
-        this.drawTopDentEdge(context, 0, 0);
-        this.drawBottomDentEdge(context, 0, this.height() - this.corner);
-        this.drawLeftEdge(context);
-        this.drawRightEdge(context);
-        this.drawTopLeftEdge(context);
-        this.drawBottomRightEdge(context);
-    } else {
-        nop();
-        /*
-        this.drawFlatBottomDentEdge(
-            context, 0, this.height() - this.corner
-        );
-        */
-    }
+    this.drawTopDentEdge(context, 0, 0);
+    this.drawBottomDentEdge(context, 0, this.height() - this.corner);
+    this.drawLeftEdge(context);
+    this.drawRightEdge(context);
+    this.drawTopLeftEdge(context);
+    this.drawBottomRightEdge(context);
 
     // erase CommandSlots
     this.eraseHoles(context);
@@ -3579,16 +3029,6 @@ CommandBlockMorph.prototype.drawBottomDentEdge = function (context, x, y) {
     );
     context.lineTo(this.width() - this.corner, y - shift);
     context.stroke();
-};
-
-CommandBlockMorph.prototype.drawFlatBottomDentEdge = function (context) {
-    if (!this.isStop()) {
-        context.fillStyle = this.color.darker(this.contrast / 2).toString();
-        context.beginPath();
-        this.drawDent(context, 0, this.height() - this.corner);
-        context.closePath();
-        context.fill();
-    }
 };
 
 CommandBlockMorph.prototype.drawLeftEdge = function (context) {
@@ -3905,24 +3345,13 @@ ReporterBlockMorph.prototype.init = function (isPredicate) {
 
 ReporterBlockMorph.prototype.snap = function (hand) {
     // passing the hand is optional (for when blocks are dragged & dropped)
-    var scripts = this.parent,
-        target;
-
-    if (!scripts instanceof ScriptsMorph) {
+    if (!this.parent instanceof ScriptsMorph) {
         return null;
     }
 
-    scripts.clearDropHistory();
-    scripts.lastDroppedBlock = this;
+    var target = this.parent.closestInput(this, hand);
 
-    target = scripts.closestInput(this, hand);
     if (target !== null) {
-        scripts.lastReplacedInput = target;
-        scripts.lastDropTarget = target.parent;
-        if (target instanceof MultiArgMorph) {
-            scripts.lastPreservedBlocks = target.inputs();
-            scripts.lastReplacedInput = target.fullCopy();
-        }
         target.parent.replaceInput(target, this);
         if (this.snapSound) {
             this.snapSound.play();
@@ -3997,19 +3426,16 @@ ReporterBlockMorph.prototype.getSlotSpec = function () {
 // ReporterBlockMorph events
 
 ReporterBlockMorph.prototype.mouseClickLeft = function (pos) {
-    var isRing;
     if (this.parent instanceof BlockInputFragmentMorph) {
         return this.parent.mouseClickLeft();
     }
     if (this.parent instanceof TemplateSlotMorph) {
-        isRing = this.parent.parent && this.parent.parent.parent &&
-            this.parent.parent.parent instanceof RingMorph;
         new DialogBoxMorph(
             this,
             this.setSpec,
             this
         ).prompt(
-            isRing ? "Input name" : "Script variable name",
+            "Input name",
             this.blockSpec,
             this.world()
         );
@@ -4100,7 +3526,6 @@ ReporterBlockMorph.prototype.drawRounded = function (context) {
     context.closePath();
     context.fill();
 
-    if (MorphicPreferences.isFlat) {return; }
 
     // add 3D-Effect:
     context.lineWidth = this.edge;
@@ -4275,8 +3700,6 @@ ReporterBlockMorph.prototype.drawDiamond = function (context) {
 
     context.closePath();
     context.fill();
-
-    if (MorphicPreferences.isFlat) {return; }
 
     // add 3D-Effect:
     context.lineWidth = this.edge;
@@ -4547,13 +3970,7 @@ ScriptsMorph.prototype.init = function (owner) {
     this.owner = owner || null;
     this.feedbackColor = SyntaxElementMorph.prototype.feedbackColor;
     this.feedbackMorph = new BoxMorph();
-
-    // "undrop" attributes:
-    this.lastDroppedBlock = null;
-    this.lastReplacedInput = null;
-    this.lastDropTarget = null;
-    this.lastPreservedBlocks = null;
-    this.lastNextBlock = null;
+    this.allowsStickyComments = true;
 
     ScriptsMorph.uber.init.call(this);
     this.setColor(new Color(70, 70, 70));
@@ -4566,16 +3983,9 @@ ScriptsMorph.prototype.fullCopy = function () {
         pos = this.position(),
         child;
     this.children.forEach(function (morph) {
-        if (!morph.block) { // omit anchored comments
-            child = morph.fullCopy();
-            child.setPosition(morph.position().subtract(pos));
-            cpy.add(child);
-            if (child instanceof BlockMorph) {
-                child.allComments().forEach(function (comment) {
-                    comment.align(child);
-                });
-            }
-        }
+        child = morph.fullCopy();
+        child.setPosition(morph.position().subtract(pos));
+        cpy.add(child);
     });
     cpy.adjustBounds();
     return cpy;
@@ -4589,7 +3999,6 @@ ScriptsMorph.prototype.step = function () {
 
     if (this.feedbackMorph.parent) {
         this.feedbackMorph.destroy();
-        this.feedbackMorph.parent = null;
     }
     if (hand.children.length === 0) {
         return null;
@@ -4725,16 +4134,6 @@ ScriptsMorph.prototype.closestInput = function (reporter, hand) {
     });
     if (all.length === 0) {return null; }
 
-    function touchingVariadicArrowsIfAny(inp, point) {
-        if (inp instanceof MultiArgMorph) {
-            if (point) {
-                return inp.arrows().bounds.containsPoint(point);
-            }
-            return inp.arrows().bounds.intersects(fb);
-        }
-        return true;
-    }
-
     if (this.isPreferringEmptySlots) {
         if (hand) {
             handPos = hand.position();
@@ -4748,8 +4147,7 @@ ScriptsMorph.prototype.closestInput = function (reporter, hand) {
                             || input.isEmptySlot())
                         && !input.isLocked()
                         && input.bounds.containsPoint(handPos)
-                        && !contains(blackList, input)
-                        && touchingVariadicArrowsIfAny(input, handPos);
+                        && !contains(blackList, input);
                 }
             );
             if (target) {
@@ -4766,8 +4164,7 @@ ScriptsMorph.prototype.closestInput = function (reporter, hand) {
                         || input.isEmptySlot())
                     && !input.isLocked()
                     && input.bounds.intersects(fb)
-                    && !contains(blackList, input)
-                    && touchingVariadicArrowsIfAny(input);
+                    && !contains(blackList, input);
             }
         );
         if (target) {
@@ -4814,6 +4211,7 @@ ScriptsMorph.prototype.closestBlock = function (comment, hand) {
         target,
         all;
 
+    if (!this.allowsStickyComments) {return null; }
     all = [];
     stacks.forEach(function (stack) {
         all = all.concat(stack.allChildren().slice(0).reverse().filter(
@@ -4829,7 +4227,6 @@ ScriptsMorph.prototype.closestBlock = function (comment, hand) {
             all,
             function (block) {
                 return !block.comment
-                    && !block.isPrototype
                     && block.bounds.containsPoint(handPos);
             }
         );
@@ -4841,7 +4238,6 @@ ScriptsMorph.prototype.closestBlock = function (comment, hand) {
         all,
         function (block) {
             return !block.comment
-                && !block.isPrototype
                 && block.bounds.intersects(fb);
         }
     );
@@ -4865,18 +4261,6 @@ ScriptsMorph.prototype.userMenu = function () {
     }
     menu.addItem('clean up', 'cleanUp', 'arrange scripts\nvertically');
     menu.addItem('add comment', 'addComment');
-    if (this.lastDroppedBlock) {
-        menu.addItem(
-            'undrop',
-            'undrop',
-            'undo the last\nblock drop\nin this pane'
-        );
-    }
-    menu.addItem(
-        'scripts pic...',
-        'exportScriptsPicture',
-        'open a new window\nwith a picture of all scripts'
-    );
     if (ide) {
         menu.addLine();
         menu.addItem(
@@ -4935,84 +4319,9 @@ ScriptsMorph.prototype.cleanUp = function () {
     this.adjustBounds();
 };
 
-ScriptsMorph.prototype.exportScriptsPicture = function () {
-    var boundingBox, pic, ctx;
-    if (this.children.length === 0) {return; }
-    boundingBox = this.children[0].fullBounds();
-    this.children.forEach(function (child) {
-        if (child.isVisible) {
-            boundingBox = boundingBox.merge(child.fullBounds());
-        }
-    });
-    pic = newCanvas(boundingBox.extent());
-    ctx = pic.getContext('2d');
-    this.children.forEach(function (child) {
-        var pos = child.position();
-        if (child.isVisible) {
-            ctx.drawImage(
-                child.fullImageClassic(),
-                pos.x - boundingBox.origin.x,
-                pos.y - boundingBox.origin.y
-            );
-        }
-    });
-    window.open(pic.toDataURL());
-};
 
 ScriptsMorph.prototype.addComment = function () {
     new CommentMorph().pickUp(this.world());
-};
-
-ScriptsMorph.prototype.undrop = function () {
-    if (!this.lastDroppedBlock) {return; }
-    if (this.lastDroppedBlock instanceof CommandBlockMorph) {
-        if (this.lastNextBlock) {
-            this.add(this.lastNextBlock);
-        }
-        if (this.lastDropTarget) {
-            if (this.lastDropTarget.loc === 'bottom') {
-                if (this.lastDropTarget.type === 'slot') {
-                    if (this.lastNextBlock) {
-                        this.lastDropTarget.element.nestedBlock(
-                            this.lastNextBlock
-                        );
-                    }
-                } else { // 'block'
-                    if (this.lastNextBlock) {
-                        this.lastDropTarget.element.nextBlock(
-                            this.lastNextBlock
-                        );
-                    }
-                }
-            } else if (this.lastDropTarget.loc === 'top') {
-                this.add(this.lastDropTarget.element);
-            }
-        }
-    } else { // ReporterBlockMorph
-        if (this.lastDropTarget) {
-            this.lastDropTarget.replaceInput(
-                this.lastDroppedBlock,
-                this.lastReplacedInput
-            );
-            this.lastDropTarget.fixBlockColor(null, true);
-            if (this.lastPreservedBlocks) {
-                this.lastPreservedBlocks.forEach(function (morph) {
-                    morph.destroy();
-                });
-            }
-        }
-    }
-    this.lastDroppedBlock.pickUp(this.world());
-    this.clearDropHistory();
-};
-
-
-ScriptsMorph.prototype.clearDropHistory = function () {
-    this.lastDroppedBlock = null;
-    this.lastReplacedInput = null;
-    this.lastDropTarget = null;
-    this.lastPreservedBlocks = null;
-    this.lastNextBlock = null;
 };
 
 // ScriptsMorph blocks layout fix
@@ -5053,7 +4362,7 @@ ScriptsMorph.prototype.reactToDropOf = function (droppedMorph, hand) {
     Usually I am just a receptacle for inherited methods and attributes,
     however, if my 'type' attribute is set to one of the following
     values, I act as an iconic slot myself:
-
+    
         'list'    - a list symbol
 */
 
@@ -5154,6 +4463,7 @@ ArgMorph.prototype.objectIcon = function () {
 ArgMorph.prototype.isEmptySlot = function () {
     return this.type !== null;
 };
+
 
 // CommandSlotMorph ////////////////////////////////////////////////////
 
@@ -5336,8 +4646,6 @@ CommandSlotMorph.prototype.drawNew = function () {
     // draw the 'flat' shape:
     context.fillStyle = this.rfColor.toString();
     this.drawFlat(context);
-
-    if (MorphicPreferences.isFlat) {return; }
 
     // add 3D-Effect:
     this.drawEdges(context);
@@ -5664,8 +4972,6 @@ RingCommandSlotMorph.prototype.drawNew = function () {
     // draw the 'flat' shape:
     this.drawFlat(context);
 
-    if (MorphicPreferences.isFlat) {return; }
-
     // add 3D-Effect:
     this.drawEdges(context);
 };
@@ -5799,32 +5105,6 @@ CSlotMorph.prototype.getSpec = function () {
     return '%c';
 };
 
-CSlotMorph.prototype.mappedCode = function (definitions) {
-    var code = StageMorph.prototype.codeMappings.reify || '<#1>',
-        codeLines = code.split('\n'),
-        nested = this.nestedBlock(),
-        part = nested ? nested.mappedCode(definitions) : '',
-        partLines = (part.toString()).split('\n'),
-        rx = new RegExp('<#1>', 'g');
-
-    codeLines.forEach(function (codeLine, idx) {
-        var prefix = '',
-            indent;
-        if (codeLine.trimLeft().indexOf('<#1>') === 0) {
-            indent = codeLine.indexOf('<#1>');
-            prefix = codeLine.slice(0, indent);
-        }
-        codeLines[idx] = codeLine.replace(
-            new RegExp('<#1>'),
-            partLines.join('\n' + prefix)
-        );
-        codeLines[idx] = codeLines[idx].replace(rx, partLines.join('\n'));
-    });
-
-    return codeLines.join('\n');
-};
-
-
 // CSlotMorph layout:
 
 CSlotMorph.prototype.fixLayout = function () {
@@ -5865,8 +5145,6 @@ CSlotMorph.prototype.drawNew = function () {
 
     // draw the 'flat' shape:
     this.drawFlat(context);
-
-    if (MorphicPreferences.isFlat) {return; }
 
     // add 3D-Effect:
     this.drawTopRightEdge(context);
@@ -6283,9 +5561,7 @@ InputSlotMorph.prototype.setContents = function (aStringOrFloat) {
         isConstant = dta instanceof Array;
     if (isConstant) {
         dta = localize(dta[0]);
-        cnts.isItalic = !this.isReadOnly;
     } else { // assume dta is a localizable choice if it's a key in my choices
-        cnts.isItalic = false;
         if (this.choices !== null && this.choices[dta] instanceof Array) {
             return this.setContents(this.choices[dta]);
         }
@@ -6329,7 +5605,7 @@ InputSlotMorph.prototype.dropDownMenu = function () {
     }
     menu.addItem(' ', null);
     for (key in choices) {
-        if (Object.prototype.hasOwnProperty.call(choices, key)) {
+        if (choices.hasOwnProperty(key)) {
             if (key[0] === '~') {
                 menu.addLine();
             } else {
@@ -6362,38 +5638,6 @@ InputSlotMorph.prototype.messagesMenu = function () {
     if (allNames.length > 0) {
         dict['~'] = null;
     }
-    dict['new...'] = function () {
-
-        new DialogBoxMorph(
-            myself,
-            myself.setContents,
-            myself
-        ).prompt(
-            'Message name',
-            null,
-            myself.world()
-        );
-    };
-
-    return dict;
-};
-
-InputSlotMorph.prototype.messagesReceivedMenu = function () {
-    var dict = {'any message': ['any message']},
-        rcvr = this.parentThatIsA(BlockMorph).receiver(),
-        stage = rcvr.parentThatIsA(StageMorph),
-        myself = this,
-        allNames = [];
-
-    stage.children.concat(stage).forEach(function (morph) {
-        if (morph instanceof SpriteMorph || morph instanceof StageMorph) {
-            allNames = allNames.concat(morph.allMessageNames());
-        }
-    });
-    allNames.forEach(function (name) {
-        dict[name] = name;
-    });
-    dict['~'] = null;
     dict['new...'] = function () {
 
         new DialogBoxMorph(
@@ -6673,9 +5917,7 @@ InputSlotMorph.prototype.fixLayout = function () {
                 + arrow.width()
                 + this.edge * 2
                 + this.typeInPadding * 2,
-            contents.rawHeight ? // single vs. multi-line contents
-                        contents.rawHeight() + arrow.width()
-                                : contents.height() / 1.2 + arrow.width(),
+            contents.rawHeight() + arrow.width(),
             this.minWidth // for text-type slots
         ));
     }
@@ -6723,13 +5965,7 @@ InputSlotMorph.prototype.mouseClickLeft = function (pos) {
 };
 
 InputSlotMorph.prototype.reactToKeystroke = function () {
-    var cnts;
-    if (this.constant) {
-        cnts = this.contents();
-        this.constant = null;
-        cnts.isItalic = false;
-        cnts.drawNew();
-    }
+    this.constant = null;
 };
 
 InputSlotMorph.prototype.reactToEdit = function () {
@@ -6761,60 +5997,6 @@ InputSlotMorph.prototype.reactToSliderEdit = function () {
             }
         }
     }
-};
-
-// InputSlotMorph menu:
-
-InputSlotMorph.prototype.userMenu = function () {
-    var menu = new MenuMorph(this);
-    if (!StageMorph.prototype.enableCodeMapping || this.isNumeric) {
-        return this.parent.userMenu();
-    }
-    menu.addItem(
-        'code string mapping...',
-        'mapToCode'
-    );
-    return menu;
-};
-
-// InputSlotMorph code mapping
-
-/*
-    code mapping lets you use blocks to generate arbitrary text-based
-    source code that can be exported and compiled / embedded elsewhere,
-    it's not part of Snap's evaluator and not needed for Snap itself
-*/
-
-InputSlotMorph.prototype.mapToCode = function () {
-    // private - open a dialog box letting the user map code via the GUI
-    new DialogBoxMorph(
-        this,
-        function (code) {
-            StageMorph.prototype.codeMappings.string = code;
-        },
-        this
-    ).promptCode(
-        'Code mapping - String <#1>',
-        StageMorph.prototype.codeMappings.string || '',
-        this.world()
-    );
-};
-
-InputSlotMorph.prototype.mappedCode = function () {
-    var code = StageMorph.prototype.codeMappings.string || '<#1>',
-        block = this.parentThatIsA(BlockMorph),
-        val = this.evaluate();
-
-    if (this.isNumeric) {return val; }
-    if (!isNaN(parseFloat(val))) {return val; }
-    if (!isString(val)) {return val; }
-    if (block && contains(
-            ['doSetVar', 'doChangeVar', 'doShowVar', 'doHideVar'],
-            block.selector
-        )) {
-        return val;
-    }
-    return code.replace(/<#1>/g, val);
 };
 
 // InputSlotMorph evaluating:
@@ -6875,9 +6057,7 @@ InputSlotMorph.prototype.drawNew = function () {
             this.width() - this.edge * 2,
             this.height() - this.edge * 2
         );
-        if (!MorphicPreferences.isFlat) {
-            this.drawRectBorder(context);
-        }
+        this.drawRectBorder(context);
     } else {
         r = (this.height() - (this.edge * 2)) / 2;
         context.fillStyle = this.color.toString();
@@ -6900,9 +6080,7 @@ InputSlotMorph.prototype.drawNew = function () {
         );
         context.closePath();
         context.fill();
-        if (!MorphicPreferences.isFlat) {
-            this.drawRoundBorder(context);
-        }
+        this.drawRoundBorder(context);
     }
 };
 
@@ -7272,8 +6450,6 @@ BooleanSlotMorph.prototype.drawDiamond = function (context) {
     context.closePath();
     context.fill();
 
-    if (MorphicPreferences.isFlat) {return; }
-
     // add 3D-Effect:
     context.lineWidth = this.edge;
     context.lineJoin = 'round';
@@ -7355,12 +6531,6 @@ BooleanSlotMorph.prototype.drawDiamond = function (context) {
     context.stroke();
 };
 
-// BooleanSlotMorph implicit formal parameters:
-
-BooleanSlotMorph.prototype.isEmptySlot = function () {
-    return true;
-};
-
 // ArrowMorph //////////////////////////////////////////////////////////
 
 /*
@@ -7430,84 +6600,6 @@ ArrowMorph.prototype.drawNew = function () {
     }
     context.closePath();
     context.fill();
-};
-
-// TextSlotMorph //////////////////////////////////////////////////////
-
-/*
-    I am a multi-line input slot, primarily used in Snap's code-mapping
-    blocks.
-*/
-
-// TextSlotMorph inherits from InputSlotMorph:
-
-TextSlotMorph.prototype = new InputSlotMorph();
-TextSlotMorph.prototype.constructor = TextSlotMorph;
-TextSlotMorph.uber = InputSlotMorph.prototype;
-
-// TextSlotMorph instance creation:
-
-function TextSlotMorph(text, isNumeric, choiceDict, isReadOnly) {
-    this.init(text, isNumeric, choiceDict, isReadOnly);
-}
-
-TextSlotMorph.prototype.init = function (
-    text,
-    isNumeric,
-    choiceDict,
-    isReadOnly
-) {
-    var contents = new TextMorph(''),
-        arrow = new ArrowMorph(
-            'down',
-            0,
-            Math.max(Math.floor(this.fontSize / 6), 1)
-        );
-
-    contents.fontSize = this.fontSize;
-    contents.drawNew();
-
-    this.isUnevaluated = false;
-    this.choices = choiceDict || null; // object, function or selector
-    this.oldContentsExtent = contents.extent();
-    this.isNumeric = isNumeric || false;
-    this.isReadOnly = isReadOnly || false;
-    this.minWidth = 0; // can be chaged for text-type inputs ("landscape")
-    this.constant = null;
-
-    InputSlotMorph.uber.init.call(this);
-    this.color = new Color(255, 255, 255);
-    this.add(contents);
-    this.add(arrow);
-    contents.isEditable = true;
-    contents.isDraggable = false;
-    contents.enableSelecting();
-    this.setContents(text);
-
-};
-
-// TextSlotMorph accessing:
-
-TextSlotMorph.prototype.getSpec = function () {
-    if (this.isNumeric) {
-        return '%mln';
-    }
-    return '%mlt'; // default
-};
-
-TextSlotMorph.prototype.contents = function () {
-    return detect(
-        this.children,
-        function (child) {
-            return (child instanceof TextMorph);
-        }
-    );
-};
-
-// TextSlotMorph events:
-
-TextSlotMorph.prototype.layoutChanged = function () {
-    this.fixLayout();
 };
 
 // SymbolMorph //////////////////////////////////////////////////////////
@@ -7596,8 +6688,6 @@ SymbolMorph.prototype.symbolCanvasColored = function (aColor) {
     switch (this.name) {
     case 'square':
         return this.drawSymbolStop(canvas, aColor);
-    case 'bug':
-        return this.drawSymbolBug(canvas, aColor);
     case 'pointRight':
         return this.drawSymbolPointRight(canvas, aColor);
     case 'gears':
@@ -7640,26 +6730,6 @@ SymbolMorph.prototype.symbolCanvasColored = function (aColor) {
         return this.drawSymbolPoster(canvas, aColor);
     case 'flash':
         return this.drawSymbolFlash(canvas, aColor);
-    case 'brush':
-        return this.drawSymbolBrush(canvas, aColor);
-    case 'rectangle':
-        return this.drawSymbolRectangle(canvas, aColor);
-    case 'rectangleSolid':
-        return this.drawSymbolRectangleSolid(canvas, aColor);
-    case 'circle':
-        return this.drawSymbolCircle(canvas, aColor);
-    case 'circleSolid':
-        return this.drawSymbolCircleSolid(canvas, aColor);
-    case 'line':
-        return this.drawSymbolLine(canvas, aColor);
-    case 'crosshairs':
-        return this.drawSymbolCrosshairs(canvas, aColor);
-    case 'paintbucket':
-        return this.drawSymbolPaintbucket(canvas, aColor);
-    case 'eraser':
-        return this.drawSymbolEraser(canvas, aColor);
-    case 'pipette':
-        return this.drawSymbolPipette(canvas, aColor);
     default:
         return canvas;
     }
@@ -8240,316 +7310,6 @@ SymbolMorph.prototype.drawSymbolFlash = function (canvas, color) {
     return canvas;
 };
 
-SymbolMorph.prototype.drawSymbolBrush = function (canvas, color) {
-    // answer a canvas showing a paintbrush
-    var ctx = canvas.getContext('2d'),
-        w = canvas.width,
-        h = canvas.height,
-        l = Math.max(w / 30, 0.5);
-
-    ctx.fillStyle = color.toString();
-    ctx.lineWidth = l * 2;
-    ctx.beginPath();
-    ctx.moveTo(w / 8 * 3, h / 2);
-    ctx.quadraticCurveTo(0, h / 2, l, h - l);
-    ctx.quadraticCurveTo(w / 2, h, w / 2, h / 8 * 5);
-    ctx.closePath();
-    ctx.fill();
-
-    ctx.lineJoin = 'round';
-    ctx.lineCap = 'round';
-    ctx.strokeStyle = color.toString();
-
-    ctx.moveTo(w / 8 * 3, h / 2);
-    ctx.lineTo(w * 0.75, l);
-    ctx.quadraticCurveTo(w, 0, w - l, h * 0.25);
-    ctx.stroke();
-
-    ctx.moveTo(w / 2, h / 8 * 5);
-    ctx.lineTo(w - l, h * 0.25);
-    ctx.stroke();
-
-    return canvas;
-};
-
-//Sean Scofield
-SymbolMorph.prototype.drawSymbolBug = function(canvas, color) {
-    var ctx = canvas.getContext('2d'),
-        w = canvas.width;
-        h = canvas.height,
-        l = Math.max(w / 20, 0.5);
-
-    ctx.strokeStyle = color.toString();
-
-    ctx.lineWidth = l * 2;
-    ctx.arc(w / 2, w / 2, w / 2.6 - l, radians(0), radians(360), false);
-    ctx.stroke();
-
-    ctx.beginPath();
-    ctx.arc(w / 3, w / 10, w / 10 - l, radians(0), radians(360), false);
-    ctx.stroke();
-
-    ctx.beginPath();
-    ctx.arc(2 * w / 3, w / 10, w / 10 - l, radians(0), radians(360), false);
-    ctx.stroke();
-
-    ctx.beginPath();
-    ctx.moveTo(w / 2, h * 2 / 5);
-    ctx.lineTo(w / 2, 0.8 * h);
-    ctx.stroke();
-
-    ctx.moveTo(0, h * 2 / 5);
-    ctx.lineTo(w * 1.5, h * 2 / 5);
-    ctx.stroke();
-    ctx.moveTo(w / 4, h / 6);
-
-    ctx.beginPath();
-    ctx.moveTo(0, h / 3);
-    ctx.lineTo(w / 5, h / 3);
-    ctx.stroke();
-
-    ctx.beginPath();
-    ctx.moveTo(0, 5 * h / 9);
-    ctx.lineTo(w / 5, 5 * h / 9);
-    ctx.stroke();
-
-    ctx.beginPath();
-    ctx.moveTo(0, h / 3);
-    ctx.lineTo(w / 5, h / 3);
-    ctx.stroke();
-
-    ctx.beginPath();
-    ctx.moveTo(0, 7 * h / 9);
-    ctx.lineTo(w / 5, 7 * h / 9);
-    ctx.stroke();
-
-    ctx.beginPath();
-    ctx.moveTo(w, 5 * h / 9);
-    ctx.lineTo(4 * w / 5, 5 * h / 9);
-    ctx.stroke();
-
-    ctx.beginPath();
-    ctx.moveTo(w, h / 3);
-    ctx.lineTo(4 * w / 5, h / 3);
-    ctx.stroke();
-
-    ctx.beginPath();
-    ctx.moveTo(w, 7 * h / 9);
-    ctx.lineTo(4 * w / 5, 7 * h / 9);
-    ctx.stroke();
-    return canvas;
-}
-
-SymbolMorph.prototype.drawSymbolRectangle = function (canvas, color) {
-    // answer a canvas showing a rectangle
-    var ctx = canvas.getContext('2d'),
-        w = canvas.width,
-        h = canvas.width,
-        l = Math.max(w / 20, 0.5);
-
-    ctx.strokeStyle = color.toString();
-    ctx.lineWidth = l * 2;
-    ctx.beginPath();
-    ctx.moveTo(l, l);
-    ctx.lineTo(w - l, l);
-    ctx.lineTo(w - l, h - l);
-    ctx.lineTo(l, h - l);
-    ctx.closePath();
-    ctx.stroke();
-    return canvas;
-};
-
-SymbolMorph.prototype.drawSymbolRectangleSolid = function (canvas, color) {
-    // answer a canvas showing a solid rectangle
-    var ctx = canvas.getContext('2d'),
-        w = canvas.width,
-        h = canvas.width;
-
-    ctx.fillStyle = color.toString();
-    ctx.beginPath();
-    ctx.moveTo(0, 0);
-    ctx.lineTo(w, 0);
-    ctx.lineTo(w, h);
-    ctx.lineTo(0, h);
-    ctx.closePath();
-    ctx.fill();
-    return canvas;
-};
-
-SymbolMorph.prototype.drawSymbolCircle = function (canvas, color) {
-    // answer a canvas showing a circle
-    var ctx = canvas.getContext('2d'),
-        w = canvas.width,
-        l = Math.max(w / 20, 0.5);
-
-    ctx.strokeStyle = color.toString();
-    ctx.lineWidth = l * 2;
-    ctx.arc(w / 2, w / 2, w / 2 - l, radians(0), radians(360), false);
-    ctx.stroke();
-    return canvas;
-};
-
-SymbolMorph.prototype.drawSymbolCircleSolid = function (canvas, color) {
-    // answer a canvas showing a solid circle
-    var ctx = canvas.getContext('2d'),
-        w = canvas.width;
-
-    ctx.fillStyle = color.toString();
-    ctx.arc(w / 2, w / 2, w / 2, radians(0), radians(360), false);
-    ctx.fill();
-    return canvas;
-};
-
-SymbolMorph.prototype.drawSymbolLine = function (canvas, color) {
-    // answer a canvas showing a diagonal line
-    var ctx = canvas.getContext('2d'),
-        w = canvas.width,
-        h = canvas.height,
-        l = Math.max(w / 20, 0.5);
-
-    ctx.strokeStyle = color.toString();
-    ctx.lineWidth = l * 2;
-    ctx.lineCap = 'round';
-    ctx.moveTo(l, l);
-    ctx.lineTo(w - l, h - l);
-    ctx.stroke();
-    return canvas;
-};
-
-SymbolMorph.prototype.drawSymbolCrosshairs = function (canvas, color) {
-    // answer a canvas showing a crosshairs
-    var ctx = canvas.getContext('2d'),
-        w = canvas.width,
-        h = canvas.height,
-        l = 0.5;
-
-    ctx.strokeStyle = color.toString();
-    ctx.lineWidth = l * 2;
-    ctx.moveTo(l, h / 2);
-    ctx.lineTo(w - l, h / 2);
-    ctx.stroke();
-    ctx.moveTo(w / 2, l);
-    ctx.lineTo(w / 2, h - l);
-    ctx.stroke();
-    ctx.moveTo(w / 2, h / 2);
-    ctx.arc(w / 2, w / 2, w / 3 - l, radians(0), radians(360), false);
-    ctx.stroke();
-    return canvas;
-};
-
-SymbolMorph.prototype.drawSymbolPaintbucket = function (canvas, color) {
-    // answer a canvas showing a paint bucket
-    var ctx = canvas.getContext('2d'),
-        w = canvas.width,
-        h = canvas.height,
-        n = canvas.width / 5,
-        l = Math.max(w / 30, 0.5);
-
-    ctx.strokeStyle = color.toString();
-    ctx.lineWidth = l * 2;
-    ctx.beginPath();
-    ctx.moveTo(n * 2, n);
-    ctx.lineTo(n * 4, n * 3);
-    ctx.lineTo(n * 3, n * 4);
-    ctx.quadraticCurveTo(n * 2, h, n, n * 4);
-    ctx.quadraticCurveTo(0, n * 3, n, n * 2);
-    ctx.closePath();
-    ctx.stroke();
-
-    ctx.lineWidth = l;
-    ctx.moveTo(n * 2, n * 2.5);
-    ctx.arc(n * 2, n * 2.5, l, radians(0), radians(360), false);
-    ctx.stroke();
-
-    ctx.moveTo(n * 2, n * 2.5);
-    ctx.lineTo(n * 2, n / 2 + l);
-    ctx.stroke();
-
-    ctx.arc(n * 1.5, n / 2 + l, n / 2, radians(0), radians(180), true);
-    ctx.stroke();
-
-    ctx.moveTo(n, n / 2 + l);
-    ctx.lineTo(n, n * 2);
-    ctx.stroke();
-
-    ctx.fillStyle = color.toString();
-    ctx.beginPath();
-    ctx.moveTo(n * 3.5, n * 3.5);
-    ctx.quadraticCurveTo(w, n * 3.5, w - l, h);
-    ctx.lineTo(w, h);
-    ctx.quadraticCurveTo(w, n * 2, n * 2.5, n * 1.5);
-    ctx.lineTo(n * 4, n * 3);
-    ctx.closePath();
-    ctx.fill();
-
-    return canvas;
-};
-
-SymbolMorph.prototype.drawSymbolEraser = function (canvas, color) {
-    // answer a canvas showing an eraser
-    var ctx = canvas.getContext('2d'),
-        w = canvas.width,
-        h = canvas.height,
-        n = canvas.width / 4,
-        l = Math.max(w / 20, 0.5);
-
-    ctx.strokeStyle = color.toString();
-    ctx.lineWidth = l * 2;
-    ctx.beginPath();
-    ctx.moveTo(n * 3, l);
-    ctx.lineTo(l, n * 3);
-    ctx.quadraticCurveTo(n, h, n * 2, n * 3);
-    ctx.lineTo(w - l, n);
-    ctx.closePath();
-    ctx.stroke();
-
-    ctx.fillStyle = color.toString();
-    ctx.beginPath();
-    ctx.moveTo(n * 3, 0);
-    ctx.lineTo(n * 1.5, n * 1.5);
-    ctx.lineTo(n * 2.5, n * 2.5);
-    ctx.lineTo(w, n);
-    ctx.closePath();
-    ctx.fill();
-
-    return canvas;
-};
-
-SymbolMorph.prototype.drawSymbolPipette = function (canvas, color) {
-    // answer a canvas showing an eyedropper
-    var ctx = canvas.getContext('2d'),
-        w = canvas.width,
-        h = canvas.height,
-        n = canvas.width / 4,
-        n2 = n / 2,
-        l = Math.max(w / 20, 0.5);
-
-    ctx.strokeStyle = color.toString();
-    ctx.lineWidth = l * 2;
-    ctx.beginPath();
-    ctx.moveTo(l, h - l);
-    ctx.quadraticCurveTo(n2, h - n2, n2, h - n);
-    ctx.lineTo(n * 2, n * 1.5);
-    ctx.stroke();
-
-    ctx.beginPath();
-    ctx.moveTo(l, h - l);
-    ctx.quadraticCurveTo(n2, h - n2, n, h - n2);
-    ctx.lineTo(n * 2.5, n * 2);
-    ctx.stroke();
-
-    ctx.fillStyle = color.toString();
-    ctx.arc(n * 3, n, n - l, radians(0), radians(360), false);
-    ctx.fill();
-
-    ctx.beginPath();
-    ctx.moveTo(n * 2, n);
-    ctx.lineTo(n * 3, n * 2);
-    ctx.stroke();
-
-    return canvas;
-};
-
 // ColorSlotMorph //////////////////////////////////////////////////////
 
 /*
@@ -8662,9 +7422,7 @@ ColorSlotMorph.prototype.drawNew = function () {
         this.width() - this.edge * 2,
         this.height() - this.edge * 2
     );
-    if (!MorphicPreferences.isFlat) {
-        this.drawRectBorder(context);
-    }
+    this.drawRectBorder(context);
 };
 
 ColorSlotMorph.prototype.drawRectBorder =
@@ -8925,20 +7683,13 @@ MultiArgMorph.prototype.drawNew = function () {
 // MultiArgMorph arity control:
 
 MultiArgMorph.prototype.addInput = function (contents) {
-    var i, name,
-        newPart = this.labelPart(this.slotSpec),
+    var newPart = this.labelPart(this.slotSpec),
         idx = this.children.length - 1;
     // newPart.alpha = this.alpha ? 1 : (1 - this.alpha) / 2;
     if (contents) {
         newPart.setContents(contents);
     } else if (this.elementSpec === '%scriptVars') {
-        name = '';
-        i = idx;
-        while (i > 0) {
-            name = String.fromCharCode(97 + (i - 1) % 26) + name;
-            i = Math.floor((i - 1) / 26);
-        }
-        newPart.setContents(name);
+        newPart.setContents('abcdefghijklmnopqrstuvwxyz'[idx - 1] || 'foo');
     } else if (contains(['%parms', '%ringparms'], this.elementSpec)) {
         newPart.setContents('#' + idx);
     }
@@ -8990,109 +7741,6 @@ MultiArgMorph.prototype.mouseClickLeft = function (pos) {
         this.escalateEvent('mouseClickLeft', pos);
     }
     this.endLayout();
-};
-
-// MultiArgMorph menu:
-
-MultiArgMorph.prototype.userMenu = function () {
-    var menu = new MenuMorph(this),
-        block = this.parentThatIsA(BlockMorph),
-        key = '',
-        myself = this;
-    if (!StageMorph.prototype.enableCodeMapping) {
-        return this.parent.userMenu();
-    }
-    if (block) {
-        if (block instanceof RingMorph) {
-            key = 'parms_';
-        } else if (block.selector === 'doDeclareVariables') {
-            key = 'tempvars_';
-        }
-    }
-    menu.addItem(
-        'code list mapping...',
-        function () {myself.mapCodeList(key); }
-    );
-    menu.addItem(
-        'code item mapping...',
-        function () {myself.mapCodeItem(key); }
-    );
-    menu.addItem(
-        'code delimiter mapping...',
-        function () {myself.mapCodeDelimiter(key); }
-    );
-    return menu;
-};
-
-// MultiArgMorph code mapping
-
-/*
-    code mapping lets you use blocks to generate arbitrary text-based
-    source code that can be exported and compiled / embedded elsewhere,
-    it's not part of Snap's evaluator and not needed for Snap itself
-*/
-
-MultiArgMorph.prototype.mapCodeDelimiter = function (key) {
-    this.mapToCode(key + 'delim', 'list item delimiter');
-};
-
-MultiArgMorph.prototype.mapCodeList = function (key) {
-    this.mapToCode(key + 'list', 'list contents <#1>');
-};
-
-MultiArgMorph.prototype.mapCodeItem = function (key) {
-    this.mapToCode(key + 'item', 'list item <#1>');
-};
-
-MultiArgMorph.prototype.mapToCode = function (key, label) {
-    // private - open a dialog box letting the user map code via the GUI
-    new DialogBoxMorph(
-        this,
-        function (code) {
-            StageMorph.prototype.codeMappings[key] = code;
-        },
-        this
-    ).promptCode(
-        'Code mapping - ' + label,
-        StageMorph.prototype.codeMappings[key] || '',
-        this.world()
-    );
-};
-
-MultiArgMorph.prototype.mappedCode = function (definitions) {
-    var block = this.parentThatIsA(BlockMorph),
-        key = '',
-        code,
-        items = '',
-        itemCode,
-        delim,
-        count = 0,
-        parts = [];
-
-    if (block) {
-        if (block instanceof RingMorph) {
-            key = 'parms_';
-        } else if (block.selector === 'doDeclareVariables') {
-            key = 'tempvars_';
-        }
-    }
-
-    code = StageMorph.prototype.codeMappings[key + 'list'] || '<#1>';
-    itemCode = StageMorph.prototype.codeMappings[key + 'item'] || '<#1>';
-    delim = StageMorph.prototype.codeMappings[key + 'delim'] || ' ';
-
-    this.inputs().forEach(function (input) {
-        parts.push(itemCode.replace(/<#1>/g, input.mappedCode(definitions)));
-    });
-    parts.forEach(function (part) {
-        if (count) {
-            items += delim;
-        }
-        items += part;
-        count += 1;
-    });
-    code = code.replace(/<#1>/g, items);
-    return code;
 };
 
 // MultiArgMorph arity evaluating:
@@ -9176,7 +7824,7 @@ ArgLabelMorph.prototype.fixLayout = function () {
 
     if (this.parent) {
         this.color = this.parent.color;
-        shadowOffset = label.shadowOffset || new Point();
+        shadowOffset = label.shadowOffset;
 
         // determine the shadow color for zebra coloring:
         if (shadowOffset.x < 0) {
@@ -9364,7 +8012,6 @@ FunctionSlotMorph.prototype.drawRounded = function (context) {
     context.closePath();
     context.fill();
 
-    if (MorphicPreferences.isFlat) {return; }
 
     // add 3D-Effect:
     context.lineWidth = this.edge;
@@ -9528,8 +8175,6 @@ FunctionSlotMorph.prototype.drawDiamond = function (context) {
     context.closePath();
     context.fill();
 
-    if (MorphicPreferences.isFlat) {return; }
-
     // add 3D-Effect:
     context.lineWidth = this.edge;
     context.lineJoin = 'round';
@@ -9689,7 +8334,7 @@ ReporterSlotMorph.prototype.evaluate = function () {
     return this.nestedBlock();
 };
 
-ReporterSlotMorph.prototype.isEmptySlot = function () {
+CommandSlotMorph.prototype.isEmptySlot = function () {
     return this.nestedBlock() === null;
 };
 
@@ -9832,8 +8477,6 @@ RingReporterSlotMorph.prototype.drawRounded = function (context) {
     context.lineTo(w, h);
     context.closePath();
     context.fill();
-
-    if (MorphicPreferences.isFlat) {return; }
 
     // add 3D-Effect:
     context.lineWidth = this.edge;
@@ -10005,8 +8648,6 @@ RingReporterSlotMorph.prototype.drawDiamond = function (context) {
 
     context.closePath();
     context.fill();
-
-    if (MorphicPreferences.isFlat) {return; }
 
     // add 3D-Effect:
     context.lineWidth = this.edge;
@@ -10308,24 +8949,6 @@ CommentMorph.prototype.userMenu = function () {
     return menu;
 };
 
-// CommentMorph hiding and showing:
-
-/*
-    override the inherited behavior to recursively hide/show all
-    children, so that my instances get restored correctly when
-    switching back out of app mode.
-*/
-
-CommentMorph.prototype.hide = function () {
-    this.isVisible = false;
-    this.changed();
-};
-
-CommentMorph.prototype.show = function () {
-    this.isVisible = true;
-    this.changed();
-};
-
 // CommentMorph dragging & dropping
 
 CommentMorph.prototype.prepareToBeGrabbed = function () {
@@ -10345,16 +8968,11 @@ CommentMorph.prototype.prepareToBeGrabbed = function () {
 
 CommentMorph.prototype.snap = function (hand) {
     // passing the hand is optional (for when blocks are dragged & dropped)
-    var scripts = this.parent,
-        target;
-
-    if (!scripts instanceof ScriptsMorph) {
+    if (!this.parent instanceof ScriptsMorph) {
         return null;
     }
 
-    scripts.clearDropHistory();
-    scripts.lastDroppedBlock = this;
-    target = scripts.closestBlock(this, hand);
+    var target = this.parent.closestBlock(this, hand);
 
     if (target !== null) {
         target.comment = this;
@@ -10390,7 +9008,7 @@ CommentMorph.prototype.align = function (topBlock, ignoreLayer) {
         );
 
         this.setLeft(rightMost + 5);
-        if (!ignoreLayer && scripts) {
+        if (!ignoreLayer) {
             scripts.addBack(this); // push to back and show
         }
 
@@ -10415,7 +9033,6 @@ CommentMorph.prototype.align = function (topBlock, ignoreLayer) {
 CommentMorph.prototype.startFollowing = function (topBlock) {
     var myself = this;
     this.align(topBlock);
-    this.world().add(this);
     this.addShadow();
     this.stickyOffset = this.position().subtract(this.block.position());
     this.step = function () {
